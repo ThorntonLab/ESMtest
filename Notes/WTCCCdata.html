@@ -209,25 +209,27 @@ rs1005303
 
 <p>Anyhow, we will probably follow tradition and ignore the X here anyways, focusing only in chr1-22.</p>
 
+<p><strong>NOTE: the section below replaced real indentifiers, genotypes, etc. with REDACTED, as these data are covered by privacy concerns</strong></p>
+
 <p>The genotype files have four columns.  These are SNP id, individual ID, genotype, and genotype score:</p>
 
-<pre><code class="sh">rs3094315  WTCCC69711   AA  1.0000
-rs3094315   WTCCC69719  AA  1.0000
-rs3094315   WTCCC69731  AG  1.0000
-rs3094315   WTCCC69680  AA  1.0000
-rs3094315   WTCCC69691  AA  1.0000
-rs3094315   WTCCC69701  AA  1.0000
-rs3094315   WTCCC69712_1    AA  1.0000
-rs3094315   WTCCC69720  AG  1.0000
-rs3094315   WTCCC69732  AG  0.9989
-rs3094315   WTCCC69682  AA  1.0000
+<pre><code class="sh">rs3094315  WTCCCREDACTED    REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
+rs3094315   WTCCCREDACTED   REDACTED    0.9989
+rs3094315   WTCCCREDACTED   REDACTED    1.0000
 </code></pre>
 
 <p>In addition, each panel has a &ldquo;sample file&rdquo; with lines like this:</p>
 
-<pre><code class="sh">WTCCC69711      1       HT      BRIGHT  11140A10        North Midlands  6       Unknown
-WTCCC69719      2       HT      BRIGHT  11140A11        Scotland        6       Unknown
-WTCCC69731      2       HT      BRIGHT  11140A12        Scotland        5       Unknown
+<pre><code class="sh">WTCCCREDACTED      1       REDACTED      BRIGHT  11140A10        REDACTED  6       Unknown
+WTCCCREDACTED      2       REDACTED      BRIGHT  11140A11        REDACTED        6       Unknown
+WTCCCREDACTED      2       REDACTED      BRIGHT  11140A12        REDACTED        5       Unknown
 </code></pre>
 
 <p>The columns are:</p>
@@ -287,14 +289,14 @@ WTCCC69731      2       HT      BRIGHT  11140A12        Scotland        5       
 #6a. Sent twice by Sanger
 #6b. Duplicated at unknown stage
 #7. 1st/2nd degree relatives
-HT  19378A2 WTCCC169703 1,2
-HT  17947G12    WTCCC169139 2
-HT  18786F8 WTCCC169437 2
-HT  18786H5 WTCCC169489 2
-HT  18795B1 WTCCC169403 2
-HT  18795C6 WTCCC169367 2
-HT  18795G2 WTCCC169392 2
-HT  18796A7 WTCCC169977 2
+REDACTED  19378A2   WTCCC169703 1,2
+REDACTED    17947G12    WTCCC169139 2
+REDACTED    18786F8 WTCCC169437 2
+REDACTED    18786H5 WTCCC169489 2
+REDACTED    18795B1 WTCCC169403 2
+REDACTED    18795C6 WTCCC169367 2
+REDACTED    18795G2 WTCCC169392 2
+REDACTED    18796A7 WTCCC169977 2
 #etc... (rest of file not shown)
 </code></pre>
 
@@ -322,6 +324,14 @@ CHR  AFFY_ID    RS_ID   FILTER
 1   SNP_A-1786405   rs16823663  1
 1   SNP_A-2258506   rs13375075  1
 </code></pre>
+
+<h1>So what needs to be done?</h1>
+
+<p>We need the following:</p>
+
+<ol>
+<li> Chiamo-to-PED/MAP conversion.  It looks like there are tools to take PED/MAP to other formats, so we may have to write our own.</li>
+</ol>
 
 </body>
 
