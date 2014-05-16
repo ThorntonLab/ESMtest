@@ -14,3 +14,171 @@ The data codes are:
 7. RA = Rheumatoid Arthritis, case
 8. T1D = Type I Diabetes, case
 9. T2D = Type II Diabetes, case
+
+The data files
+====
+The data files are in "[Chiamo](http://www.stats.ox.ac.uk/~marchini/software/gwas/file_format.html)" format.  This format is intended for use with [SNPTEST](https://mathgen.stats.ox.ac.uk/genetics_software/snptest/snptest.html), the software used for the original WTCCC analysis.  The output from SNPTEST is included with the data, but we've never looked at it.
+
+On task that we need to accomplish is Chiamo-to-PLINK format conversion.  There are hints of tools available online:
+
+1. [GenABEL](http://www.genabel.org/)
+
+No idea if these work, or of the WTCCC formats are out-of-date with respect to what these files expect.
+
+How are the data structured?
+
+There are 25 gzipped text files with names like __Affx_20070205fs1_gt_HT_Chiamo_01.txt.gz__.  Files *\_01.txt.gz through *\_22.txt.gz represent the 22 autosomes.  The file ending in \_24.txt.gz appears to represent the X/Y psuedoautosomal region (this was inferred via Google searching the SNP IDs).  The files ending in \_23.txt.gz and \_X.txt.gz both appear to be X chromosome data (again, via Googling SNP IDs).  Curiously, the two files contain many of the same SNPs, but __NOT__ the same SNPs, which is totally bizarre:
+
+```{sh}
+zcat Affx_20070205fs1_gt_HT_Chiamo_23.txt.gz|cut -f 1 | sort | uniq > 23.snps
+zcat Affx_20070205fs1_gt_HT_Chiamo_X.txt.gz|cut -f 1 | sort | uniq > X.snps
+wc -l *.snps
+ 10274 23.snps
+ 10536 X.snps
+ head -n 10 *.snps
+==> 23.snps <==
+rs1000489
+rs1000530
+rs1001874
+rs1002116
+rs1003752
+rs10047021
+rs1004823
+rs1004991
+rs1005155
+rs1005303
+
+==> X.snps <==
+rs1000489
+rs1000530
+rs1001874
+rs1002116
+rs1003752
+rs10047021
+rs1004823
+rs1004991
+rs1005155
+rs1005303
+```
+
+Anyhow, we will probably follow tradition and ignore the X here anyways, focusing only in chr1-22.
+
+The genotype files have four columns.  These are SNP id, individual ID, genotype, and genotype score:
+
+```{sh}
+rs3094315  WTCCC69711	AA	1.0000
+rs3094315	WTCCC69719	AA	1.0000
+rs3094315	WTCCC69731	AG	1.0000
+rs3094315	WTCCC69680	AA	1.0000
+rs3094315	WTCCC69691	AA	1.0000
+rs3094315	WTCCC69701	AA	1.0000
+rs3094315	WTCCC69712_1	AA	1.0000
+rs3094315	WTCCC69720	AG	1.0000
+rs3094315	WTCCC69732	AG	0.9989
+rs3094315	WTCCC69682	AA	1.0000
+```
+
+In addition, each panel has a "sample file" with lines like this:
+
+```{sh}
+WTCCC69711      1       HT      BRIGHT  11140A10        North Midlands  6       Unknown
+WTCCC69719      2       HT      BRIGHT  11140A11        Scotland        6       Unknown
+WTCCC69731      2       HT      BRIGHT  11140A12        Scotland        5       Unknown
+```
+
+The columns are:
+
+1. Individual ID
+2. Sex (male = 1, female = 2)
+3. Panel label
+4. Unknown
+5. Unknown
+6. Origin
+7. Unknown
+8. Unknown
+
+Details of these file formats can be found [here](http://www.wtccc.org.uk/info/data_formats.html).
+
+
+
+
+Exclusion lists
+===
+One complication of the data is that the raw genotype files cannot simply be used "as-is".  Each panel comes with "exclusion lists" for both individuals and SNPs:
+
+```{sh}
+find . -name "exclusion*"|grep -v gpg
+./1958BC/20070205fs1/exclusion-list-05-02-2007.txt
+./1958BC/20070205fs1/exclusion-list-snps-26_04_2007.txt
+./1958BC/exclusion-list-05-02-2007.txt
+./1958BC/exclusion-list-snps-26_04_2007.txt
+./BD/exclusion-list-05-02-2007-BD.txt
+./BD/exclusion-list-snps-26_04_2007.txt
+./CAD/exclusion-list-05-02-2007-CAD.txt
+./CAD/exclusion-list-snps-26_04_2007.txt
+./HT/exclusion-list-snps-26_04_2007.txt
+./HT/exclusion-list-05-02-2007-HT.txt
+./IBD/exclusion-list-snps-26_04_2007.txt
+./IBD/exclusion-list-05-02-2007-CD.txt
+./NBS/20070205fs1/exclusion-list.txt
+./NBS/20070205fs1/exclusion-list-snps-26_04_2007.txt
+./NBS/exclusion-list.txt
+./NBS/exclusion-list-snps-26_04_2007.txt
+./RA/exclusion-list-snps-26_04_2007.txt
+./RA/exclusion-list-05-02-2007-RA.txt
+./T1D/exclusion-list-05-02-2007-T1D.txt
+./T1D/exclusion-list-snps-26_04_2007.txt
+./T2D/exclusion-list-05-02-2007-T2D.txt
+./T2D/exclusion-list-snps-26_04_2007.txt
+```
+
+Let's look at a file excluding individuals.  We see four columns: panel label, SOMETHING, individual label reason for exclusion:
+
+```{sh}
+cat ./HT/exclusion-list-05-02-2007-HT.txt
+#1. Affy CEL file bad
+#2. Missing > 3%
+#3. Het > 0.3 || Het < 0.225
+#4a. External discordance: DIL genotyping
+#4b. External discordance: NBS blood type
+#4c. External discordance: phenotype measure in CD.
+#5. Non-european ancestry
+#6a. Sent twice by Sanger
+#6b. Duplicated at unknown stage
+#7. 1st/2nd degree relatives
+HT  19378A2	WTCCC169703	1,2
+HT	17947G12	WTCCC169139	2
+HT	18786F8	WTCCC169437	2
+HT	18786H5	WTCCC169489	2
+HT	18795B1	WTCCC169403	2
+HT	18795C6	WTCCC169367	2
+HT	18795G2	WTCCC169392	2
+HT	18796A7	WTCCC169977	2
+#etc... (rest of file not shown)
+```
+
+And how the top of a SNP exclusion file.  The columns are pretty straightforward:
+
+```{sh}
+head -n 20 ./HT/exclusion-list-snps-26_04_2007.txt 
+# The following 3 filters were applied sequentially. The number of the first filter a snp fails is gven in the FILTER column.
+#1. (Studywise missing data proportion > 0.05) OR (Studywise minor allele frequency < 0.05 AND Studywise missing data proportion > 0.01)
+#2. 58C+NBS HWE Exact Test p-value < 5.7e-7
+#3. (58C vs NBS 1df Trend Test p-value < 5.7e-7) OR (58C vs NBS 2df General Test p-value < 5.7e-7)
+CHR  AFFY_ID	RS_ID	FILTER
+1	SNP_A-2169457	rs3817856	2
+1	SNP_A-2218153	rs12141314	1
+1	SNP_A-1842509	rs2292857	1
+1	SNP_A-4218776	rs262683	2
+1	SNP_A-2038545	rs4648515	1
+1	SNP_A-1785968	rs12119163	2
+1	SNP_A-4242198	rs4648451	1
+1	SNP_A-4250429	rs2981884	1
+1	SNP_A-2242875	rs6704012	1
+1	SNP_A-2107218	rs2651912	1
+1	SNP_A-4218510	rs6670518	1
+1	SNP_A-2206691	rs6690558	1
+1	SNP_A-2219183	rs2483280	1
+1	SNP_A-1786405	rs16823663	1
+1	SNP_A-2258506	rs13375075	1
+```

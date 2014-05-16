@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=9" >
+
+<title>Using PLINK to permute GWAS data</title>
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 12px;
+   margin: 8px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre {	
+   margin-top: 0;
+   max-width: 95%;
+   border: 1px solid #ccc;
+   white-space: pre-wrap;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code.r, code.cpp {
+   background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+
+</style>
+
+
+
+<!-- MathJax scripts -->
+<script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/2.0-latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+
+</head>
+
+<body>
+<h1>Using PLINK to permute GWAS data</h1>
+
+<p><a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/">PLINK</a> is a platform for analysing GWAS data.  Lots of features, etc.</p>
+
+<p>One possible use of PLINK would be to implement the ESM test using PLINK to do all the heavy lifting.  This document is a set of notes on the good and bad of PLINK, with special emphasis on permutation output vis-a-vis best practices on high-performance computing clusters.</p>
+
+<h1>Compilation Notes</h1>
+
+<p>I have installed v1.07 from source on my iMac (OS X Mavericks, clang compilers).  It needed modification to several source files to get rid of compiler errors.  Also, the &ldquo;SYS&rdquo; variable needs to be set in the Makefile.  Instructions are provided in the Makefile.  Default is for Unix, and I had to set it to &ldquo;MAC&rdquo;.</p>
+
+<h1>Test data</h1>
+
+<p>I downloaded &ldquo;example.zip&rdquo; from <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/res.shtml#teach">here</a>.  It contains the following stuff:</p>
+
+<pre><code class="sh">ls -lhrt example/
+total 196120
+-rw-r--r--@ 1 krthornt  staff   6.7M May 24  2008 wgas1.map
+-rw-r--r--@ 1 krthornt  staff   1.6K May 24  2008 pop.cov
+-rw-r--r--@ 1 krthornt  staff   1.7M May 24  2008 gPLINK.jar
+-rw-r--r--@ 1 krthornt  staff   509B May 24  2008 extra.map
+-rw-r--r--@ 1 krthornt  staff   5.0M May 24  2008 Haploview.jar
+-rw-r--r--@ 1 krthornt  staff    79M May 24  2008 wgas1.ped
+-rw-r--r--@ 1 krthornt  staff   8.1K May 26  2008 extra.ped
+-rw-r--r--@ 1 krthornt  staff   3.8M May 26  2008 plink.exe
+-rw-r--r--@ 1 krthornt  staff   2.7K Jul 11  2008 command-list.txt
+</code></pre>
+
+<p>The file &ldquo;wgas1.ped&rdquo; is the main input file.  The PED format is described <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/data.shtml#ped">here</a>.</p>
+
+<p>Each PED file must have a corresponding MAP file, which is info about each SNP.  Details are <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/data.shtml#map">here</a>.</p>
+
+<h1>PLINK formatting issues</h1>
+
+<p>There are several issues for how to write the data files that we need to address:</p>
+
+<ol>
+<li>For case/control data, 1 = control/unaffected, 2 = case/affected, 0 = missing.</li>
+<li>We probably do not want to have sex identifiers, etc., in the PED files.</li>
+<li>MAP files allow you to put in a negative number for the mutation position, indicating an excluded SNP.  This suggests the possibility of pre-filtering (based on HWE p-values, minimum allele counts, etc.), making a new MAP file representing the filtering, and then permuting.  However, the documentation says that this only works for plain-text input, not the binary-format input (which is desirable as it can be read into memory faster).  That may not matter&ndash;maybe the plain text is ok?</li>
+</ol>
+
+<h1>PLINK usage questions/comments</h1>
+
+<p>Questions:</p>
+
+<ol>
+<li>Does PLINK have a way to subset the data?  For example, can we take large file and break it into chunks of \( M \) markers?  it <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/dataman.shtml#tabset">this</a> relevant?  Upon further poking around, <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/dataman.shtml#extract">this</a> is probably what we are looking for.  PLINK allows us to get all SNPs in a window, meaning we can break the genome up into windows of a constant size, and permute the SNPs w/in that window.</li>
+</ol>
+
+<p>Comments:</p>
+
+<ol>
+<li>It <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/thresh.shtml#hwd">looks like</a> we can exclude SNPs based on HWE in controls &ldquo;on the fly&rdquo;, which is a huge simplification.</li>
+<li>It is critical to keep the following in mind: we wish to permute SNPs in windows sizes that are chosen for computational convenience.  However, we will slide windows of <strong>a different size</strong> over the data in order to calculate ESM.  This means that the permutations <strong>must be held constant, genome-wide</strong>, a la <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC1206241/pdf/ge1383963.pdf">Churchill and Doerge</a>.  If we fail to do this, then windows used in the ESM calculations will be mixtures of different underling permutation samples.  In practice, this means that all perms from the same chromosome must use the <strong>same random number seed</strong>.</li>
+</ol>
+
+<h1>Basic usage</h1>
+
+<p>Maybe a useful <a href="http://128.40.230.201/stupkalab/downloads/2010.02.17_Lescai_TutorialPLINK.pdf">reference</a>?</p>
+
+<p>Vanilla association test.  The output is a \( \chi^2 \) statistic for each marker:</p>
+
+<pre><code class="sh">#!sh
+
+#Basic association test, HWE test, and MAF counting, all in 1 command.  That is pretty cool.
+#The --counts option replaces allele frequencies with counts in the output
+../plink-1.07-src/plink --file ../example/wgas1 --assoc --counts --hardy --freq
+</code></pre>
+
+<h1>Generating permutations of the data</h1>
+
+<p>PLINK can generate permutations of the data, and output either &ldquo;empirical&rdquo; p-values or the permuted values of all test statistics.</p>
+
+<p>Several examples:</p>
+
+<pre><code class="sh">#!sh
+
+#Exploring permutations.
+
+#Generate 100 perms of the example data, with association statistics written out
+#This command simply reports two types of permutation p-value for the association statistic
+#../plink-1.07-src/plink --file ../example/wgas1 --assoc --mperm 100 --seed 101
+
+#Let&#39;s save ALL the perms.
+#The output from this is UGLY.  For K snps:
+#perm number permstat1 permstat2 ... permstat_k
+#The command below is the preferred input for ESM, as the chi-squared is rapid to calculate.  
+#Although the p-value of ANY single-marker test can be used as the ESM input, 
+#other tests can be 10-100x slower to compute PER MARKER, which is really, really bad when you are permuting
+../plink-1.07-src/plink --file ../example/wgas1 --assoc --mperm 10000 --seed 101 --mperm-save-all
+
+#We can do it w/logistic test.  This is SLOW, as expected
+../plink-1.07-src/plink --file ../example/wgas1 --logistic --mperm 100 --seed 101 --mperm-save-all
+
+#We can do it w/Fisher&#39;s Exact test.  Again, slow
+../plink-1.07-src/plink --file ../example/wgas1 --fisher --mperm 100 --seed 101 --mperm-save-all
+</code></pre>
+
+<p>On my iMac, it took 37 minutes and 50 seconds to do the \( 10^4 \) permutations of the example data, which consists of 90 individuals and over \( 2 \times 10^5 \) SNPS:</p>
+
+<pre><code class="sh">wc example/wgas1.ped 
+      90 41165460 82332090 example/wgas1.ped
+wc testing/plink.frq.count 
+  228695 1600865 10977360 testing/plink.frq.count
+</code></pre>
+
+<p>That timing isn&#39;t so bad, but it would be useful to test how long it takes to do, say, \( 3 \times 10^6 \) permutations of \( 3\times 10^3 \) individuals for 50 or 100 SNPs.  Presumably PLINK is smart enough that the \( \chi^2 \) calculation is the slow part.  In other words, I&#39;m hoping that it is permuting indexes representing each individual rather than actually moving all the genotype data around.</p>
+
+<p>The output file is 17GB, gzipping down to 5.3GB, and the gzipping took a LONG time.</p>
+
+<p>Some issues immediately become apparent:</p>
+
+<ol>
+<li>PLINK writes output to the screen.  In a GE environment, we&#39;d need to redirect stdout and stderr to /dev/null, otherwise we&#39;d crush the file system with the .e/.o files.</li>
+<li>PLINK is not buffering output internally.  Rather, it continuously writes to a file called &ldquo;plink.mperm.dump.all&rdquo;, which is plain-text.  This approach has several drawbacks.  First, it is not clear that a file system like gluster could handle this.<br/></li>
+<li>PLINK has a set of default output file <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/reference.shtml#output">names</a>.  The default behavior is to name each output file plink.suffix, where suffix is a function of the arguments you are using.  The prefix may be changes via the &ndash;out option (see example somewhere down below).</li>
+</ol>
+
+<p>The reason why these issues are important is that we will need to split up the data into chunks of \( M \) markers, and generate a large number of permutations per chunks.  Because we cannot control the output name, we may need to make a subdirectory for each chunk.  Further, the uncompressed files are a problem in terms of space, but we can easily gzip after each run.</p>
+
+<p>Some solutions for dealing w/the output include:</p>
+
+<ol>
+<li>gzipping immediately after the perms are generated.  This is a no-brainer, but time-intensive.</li>
+<li>adding the output files to a growing tar-format archive.  This requires file-locking at the shell level, which I have no direct experience with.  In principle, these tar archives are &ldquo;mountable&rdquo; as if they were their own partition.  Again, no experience, and may have to ask Harry.</li>
+<li>Can we use mkfifo to simultaneously permute and gzip?</li>
+</ol>
+
+<p>Yes, the named pipes do seem to work, which is great:</p>
+
+<pre><code class="sh">#!sh
+
+#Exploring permutations using named pipes
+
+mkfifo plink.mperm.dump.all
+../plink-1.07-src/plink --file ../example/wgas1 --assoc --mperm 100 --seed 101 --mperm-save-all &amp;
+cat plink.mperm.dump.all | gzip &gt; plink.mperm.dump.all.gz
+rm -f plink.mperm.dump.all
+</code></pre>
+
+<p>No idea what the effect of the named pipe technique would be on gluster load, etc.</p>
+
+<p>Anyhow, let&#39;s redo the \( 10^4 \) perms of the test data using this technique:</p>
+
+<pre><code class="sh">#!sh
+
+mkfifo plink.mperm.dump.all
+../plink-1.07-src/plink --file ../example/wgas1 --assoc --mperm 10000 --seed 101 --mperm-save-all &amp;
+cat plink.mperm.dump.all | gzip &gt; plink.mperm.dump.all.gz
+rm -f plink.mperm.dump.all
+</code></pre>
+
+<p>Executing the script gave the following results:</p>
+
+<pre><code class="sh">time sh permutation2.sh
+
+real  46m10.570s
+user    19m55.896s
+sys 0m38.645s
+</code></pre>
+
+<p>So, that&#39;s a 20% performance hit, but the benefit is that we skip the generation of one very large file.</p>
+
+<h1>Permuting subsets of the data</h1>
+
+<p>Let&#39;s try the following:</p>
+
+<ol>
+<li> Permute just a subset of the test data</li>
+<li> Apply a HWE filter.  The filter will be liberal, so that SNPs are certain to get tossed.</li>
+<li> Manipulate the output file names</li>
+</ol>
+
+<pre><code class="sh">#!sh
+
+OFILEBASE=subset
+OFILE=$OFILEBASE.mperm.dump.all
+mkfifo $OFILE
+#The arguments are nicely self-explanatory...
+../plink-1.07-src/plink --file ../example/wgas1 --assoc --mperm 10000 --seed 101 --mperm-save-all --chr 2 --from-kb 5000 --to-kb 10000 --hwe 0.05 --out $OFILEBASE &amp;
+cat $OFILE | gzip &gt; $OFILE.gz
+rm -f $OFILE
+</code></pre>
+
+<p>Some of the info printed to stdout is encouraging, suggesting that SNPs are excluded based on rejected HWE in controls only (which is what the documentation says, so yay for that):</p>
+
+<pre><code class="sh">5 markers to be excluded based on HWE test ( p &lt;= 0.05 )
+  11 markers failed HWE test in cases
+    5 markers failed HWE test in controls
+</code></pre>
+
+<p>Additional notes:</p>
+
+<ol>
+<li>If you input &ndash;to-kb values that are greater than the length of the chromosome, the program handles it fine, and simply does the requested operation up until the last SNP.</li>
+<li><p>If your &ndash;from-kb is greater than the position of the last marker, PLINK just prints an error message to stderr</p>
+
+<h1>Trying to tie it all together</h1></li>
+</ol>
+
+<p>We have figured out how to:</p>
+
+<ol>
+<li> Calculate $\chi<sup>2$</sup> for every marker</li>
+<li> Subset the data based on physical ranges</li>
+<li> Obtain the permutation distribution of the $\chi<sup>2$</sup> statistic for the subsetted data</li>
+<li> Use named pipes to avoid writing the very large permutation files.</li>
+<li> How to control the prefix of the output file names</li>
+<li> If you pick a window where there are no markers, the program exist gracefully.</li>
+</ol>
+
+<p>When the run is successful, the output looks like:</p>
+
+<pre><code class="sh">   ls -lhrt
+total 128
+-rw-r--r--+ 1 krthornt  staff   324B May 15 13:08 permutation2.sh
+-rw-r--r--+ 1 krthornt  staff    46K May 15 13:09 subset.mperm.dump.all.gz
+-rw-r--r--+ 1 krthornt  staff   2.0K May 15 13:09 subset.log
+-rw-r--r--+ 1 krthornt  staff   264B May 15 13:09 subset.assoc.mperm
+-rw-r--r--+ 1 krthornt  staff   576B May 15 13:09 subset.assoc
+</code></pre>
+
+<p>The files are:</p>
+
+<ol>
+<li>subset.log: a repeat of what is written to stdout.  This can be deleted, or they can all be archived for posterity&#39;s sake.</li>
+<li>subset.assoc.mperm: the permutation p-value of the association test statistics.  We do not need this&ndash;delete</li>
+<li>subset.assoc: the output of the association test.  This file is needed, as it contains the names of the SNPs that were analyzed, and is critical info, allowing us to read the MAP file back in and assign chromosome, position, etc.</li>
+<li>subset.mperm.dump.all.gz: for each permuted data set, you get the permutation ID number, and then the permuted association test statistic for each marker, in the order that they appear in subset.assoc.  (That last statement is an assumption&ndash;not verified!)</li>
+</ol>
+
+<p>I think that the situation for actually doing the perms is simple:</p>
+
+<ol>
+<li> Choose a window size corresponding to a number of SNPs that is modest on average (50? 100?).</li>
+<li> The output file name prefix can simply be chrC.start.stop, where C is the chromosome label (1-22, as the data are only autosomal), and the start/stop are the values passed to PLINK&#39;s &ndash;from-kb and &ndash;to-kb arguments.</li>
+</ol>
+
+<p>The appeal is that we need very few tools (see next section).  The caveat is whether or not HPC can handle the I/O load.  That&#39;s Harry&#39;s problem&hellip;</p>
+
+<h1>So what do we need?</h1>
+
+<ol>
+<li> A program to convert WTCCC data into PLINK format</li>
+<li> A program to merge the permutation output from PLINK back into a large file.  Given the sizes, I think we need to suck it up and write directly to gzipped files using the low-level <a href="http://zlib.net/">zlib</a> library, which allows appending, seeking, etc.  This file needs to be &ldquo;sensible&rdquo;, containing the SNP names from the WTCCC input files, so that they can be mapped directly to genes, etc., using current annotations.  Not doing this the first time through was a big impediment to downstream analysis.   In practice, this step merges the .assoc file with the .mperm.dump.all.gz file with the MAP file for the appropriate chromosome.</li>
+<li> A program to perform the ESM test on the output of #2</li>
+<li> We need to deal with LD between SNPS.  Not sure if this is a custom program to write, or if PLINK can do something automatically.</li>
+</ol>
+
+<p>Outside-the-box ideas:</p>
+
+<ol>
+<li> Instead of piping the named pipe to gzip, could we simply buffer the data internally and then write it to a tar file?  Problem: large data = risk of node crashing.</li>
+</ol>
+
+<h1>Dealing with linkage disequilibrium (LD)</h1>
+
+<p>PLINK has <a href="http://pngu.mgh.harvard.edu/%7Epurcell/plink/ld.shtml">functions</a> for calculating LD.  They are easy to use.</p>
+
+<p>To calculate pairwise correlation coefficients ( $r<sup>2$</sup> ) for <strong>ALL</strong> pairs of markers:</p>
+
+<pre><code class="sh">../plink-1.07-src/plink --file ../example/wgas1 --r2
+</code></pre>
+
+<p>For just a single chromosome, outputting to chr2.ld and removing markers with significant HWE deviations in controls:</p>
+
+<pre><code class="sh">../plink-1.07-src/plink --file ../example/wgas1 --r2 --chr 2 --out chr2 --hwe 0.05
+</code></pre>
+
+<p>Sneakily, PLNK has some defaults that we need to over-write.  The following command calculates LD for all pairs of SNPs within 1000 SNPs of each other, within the same 10 megabase window (10,000kb), and only reports LD statistics &gt; 0.8:</p>
+
+<pre><code class="sh">../plink-1.07-src/plink --file ../example/wgas1 --r2 0.8 --chr 2 --out chr2 --hwe 0.05 --ld-window 1000 --ld-window-kb 10000 --ld-window-r2 0.8
+</code></pre>
+
+<p>So, we just need to run that per chromosome once, gzip up the output, and store it.</p>
+
+</body>
+
+</html>
+
