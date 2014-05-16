@@ -1,0 +1,16 @@
+WTCCC data
+=====
+
+The data consist of 7 panels of cases plus two panels of controls.  The controls are merged into one big control group.
+
+The data codes are:
+
+1. 1958BC = 1958 Birth Cohort, control
+2. NBS = National Blood Service Registry, control
+3. BD = Bipolar disorder, case
+4. CAD = Coronary Artery Disease, case
+5. HT = Hypertension, case
+6. IBD = Inflammatory Bowel Disease, case
+7. RA = Rheumatoid Arthritis, case
+8. T1D = Type I Diabetes, case
+9. T2D = Type II Diabetes, case
