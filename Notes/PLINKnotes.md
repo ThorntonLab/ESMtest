@@ -5,7 +5,7 @@ Using PLINK to permute GWAS data
 
 Ineresting fact.  There is a "[fork](https://www.cog-genomics.org/plink2)" of PLINK that is a collab b/w the original authors, BGI, and some other folks.  It appears to be geared more towards nextgen-based GWAS. We'll stick with 1.07 for now...
 
-PLING 1.9 is available as of May 16, 2014.  Claims to be faster.  Will investigate soon.
+PLINK 1.9 is available as of May 16, 2014.  Claims to be faster.  Will investigate soon.
 
 One possible use of PLINK would be to implement the ESM test using PLINK to do all the heavy lifting.  This document is a set of notes on the good and bad of PLINK, with special emphasis on permutation output vis-a-vis best practices on high-performance computing clusters.
 
