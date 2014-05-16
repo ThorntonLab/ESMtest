@@ -203,3 +203,5 @@ We need the following:
 This should result in 7 pairs of PED/MAP files, residing in subdirectories named using the data codes described above.  We can then use PLINK for remaining filtering (HWE, LD, etc.)
 
 One important point:  the exclusion lists describe markers that are excluded due to HWE violations.  However, my own previous analysis found that there are more markers violating HWE.  We'll use PLINK to handle that.
+
+Remember: a majorly convenient feature of PLINK's MAP files is that we can convert the positions of excluded SNPs to negative numbers.
