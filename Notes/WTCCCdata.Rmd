@@ -191,3 +191,9 @@ So what needs to be done?
 We need the following:
 
 1.  Chiamo-to-PED/MAP conversion.  It looks like there are tools to take PED/MAP to other formats, so we may have to write our own.
+2.  It is almost certainly the case that the MAP files must be made separately for each case/control pair.  __We should reread the WTCCC paper and check if it states whether or not markers/individuals were excluded globally or on a per-comparison basis.  I suspect that it is the latter.__
+3.  The exclusion files need to be accounted for while converting the Chiamo files.  Exactly how depends on how we treat the issues brought up in the previous point.
+
+This should result in 7 pairs of PED/MAP files, residing in subdirectories named using the data codes described above.  We can then use PLINK for remaining filtering (HWE, LD, etc.)
+
+One important point:  the exclusion lists describe markers that are excluded due to HWE violations.  However, my own previous analysis found that there are more markers violating HWE.  We'll use PLINK to handle that.

@@ -331,7 +331,13 @@ CHR  AFFY_ID    RS_ID   FILTER
 
 <ol>
 <li> Chiamo-to-PED/MAP conversion.  It looks like there are tools to take PED/MAP to other formats, so we may have to write our own.</li>
+<li> It is almost certainly the case that the MAP files must be made separately for each case/control pair.  <strong>We should reread the WTCCC paper and check if it states whether or not markers/individuals were excluded globally or on a per-comparison basis.  I suspect that it is the latter.</strong></li>
+<li> The exclusion files need to be accounted for while converting the Chiamo files.  Exactly how depends on how we treat the issues brought up in the previous point.</li>
 </ol>
+
+<p>This should result in 7 pairs of PED/MAP files, residing in subdirectories named using the data codes described above.  We can then use PLINK for remaining filtering (HWE, LD, etc.)</p>
+
+<p>One important point:  the exclusion lists describe markers that are excluded due to HWE violations.  However, my own previous analysis found that there are more markers violating HWE.  We&#39;ll use PLINK to handle that.</p>
 
 </body>
 
