@@ -345,7 +345,58 @@ CHR  AFFY_ID    RS_ID   FILTER
 
 <p>One important point:  the exclusion lists describe markers that are excluded due to HWE violations.  However, my own previous analysis found that there are more markers violating HWE.  We&#39;ll use PLINK to handle that.</p>
 
-<p>Remember: a majorly convenient feature of PLINK&#39;s MAP files is that we can convert the positions of excluded SNPs to negative numbers.</p>
+<p>It looks like we really should use PLINK&#39;s utility to convert from PED to binary (see PLINKnotes).  At the conversion step, we can exclude individuals and snps.  It also looks like we can filter on HWE, etc., as well. The HHE filtering during &ndash;make-bed is not documented that I can see, but I tested it on the example data:</p>
+
+<pre><code class="sh">../plink-1.07-src/plink --file ../example/wgas1 --make-bed --hwe 0.05
+
+@----------------------------------------------------------@
+|        PLINK!       |     v1.07      |   10/Aug/2009     |
+|----------------------------------------------------------|
+|  (C) 2009 Shaun Purcell, GNU General Public License, v2  |
+|----------------------------------------------------------|
+|  For documentation, citation &amp; bug-report instructions:  |
+|        http://pngu.mgh.harvard.edu/purcell/plink/        |
+@----------------------------------------------------------@
+
+Web-based version check ( --noweb to skip )
+Recent cached web-check found... OK, v1.07 is current
+
++++ PLINK 1.9 is now available! See above website for details +++ 
+
+Writing this text to log file [ plink.log ]
+Analysis started: Fri May 16 15:47:01 2014
+
+Options in effect:
+  --file ../example/wgas1
+    --make-bed
+    --hwe 0.05
+
+228694 (of 228694) markers to be included from [ ../example/wgas1.map ]
+90 individuals read from [ ../example/wgas1.ped ] 
+90 individuals with nonmissing phenotypes
+Assuming a disease phenotype (1=unaff, 2=aff, 0=miss)
+Missing phenotype value is also -9
+49 cases, 41 controls and 0 missing
+45 males, 45 females, and 0 of unspecified sex
+Before frequency and genotyping pruning, there are 228694 SNPs
+90 founders and 0 non-founders found
+4579 markers to be excluded based on HWE test ( p &lt;= 0.05 )
+    5225 markers failed HWE test in cases
+    4579 markers failed HWE test in controls
+Total genotyping rate in remaining individuals is 0.993346
+0 SNPs failed missingness test ( GENO &gt; 1 )
+0 SNPs failed frequency test ( MAF &lt; 0 )
+After frequency and genotyping pruning, there are 224115 SNPs
+After filtering, 49 cases, 41 controls and 0 missing
+After filtering, 45 males, 45 females, and 0 of unspecified sex
+Writing pedigree information to [ plink.fam ] 
+Writing map (extended format) information to [ plink.bim ] 
+Writing genotype bitfile to [ plink.bed ] 
+Using (default) SNP-major mode
+
+Analysis finished: Fri May 16 15:47:11 2014
+
+</code></pre>
 
 </body>
 

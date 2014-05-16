@@ -5,6 +5,8 @@ Using PLINK to permute GWAS data
 
 Ineresting fact.  There is a "[fork](https://www.cog-genomics.org/plink2)" of PLINK that is a collab b/w the original authors, BGI, and some other folks.  It appears to be geared more towards nextgen-based GWAS. We'll stick with 1.07 for now...
 
+PLING 1.9 is available as of May 16, 2014.  Claims to be faster.  Will investigate soon.
+
 One possible use of PLINK would be to implement the ESM test using PLINK to do all the heavy lifting.  This document is a set of notes on the good and bad of PLINK, with special emphasis on permutation output vis-a-vis best practices on high-performance computing clusters.
 
 Compilation Notes
@@ -265,6 +267,35 @@ Sneakily, PLNK has some defaults that we need to over-write.  The following comm
 ```
 
 So, we just need to run that per chromosome once, gzip up the output, and store it.
+
+How much faster is the binary input?
+====
+PLINK lets you convert the PED/MAP files from plain text into native [binary format](http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#bed).
+
+Converting results in __much__ smaller files:
+```{sh}
+#The command is easy
+../plink-1.07-src/plink --file ../example/wgas1 --make-bed
+
+ls -lhrt
+total 25384
+-rw-r--r--+ 1 krthornt  staff   281B May 16 15:25 btest.sh
+-rw-r--r--+ 1 krthornt  staff   2.1K May 16 15:25 plink.fam
+-rw-r--r--+ 1 krthornt  staff   1.7K May 16 15:25 plink.log
+-rw-r--r--+ 1 krthornt  staff   7.4M May 16 15:25 plink.bim
+-rw-r--r--+ 1 krthornt  staff   5.0M May 16 15:25 plink.bed
+
+#Compare to old file sizes:
+thornton01:binary_test krthornt$ ls -lhrt ../example/wgas1.*
+-rw-r--r--+ 1 krthornt  staff   6.7M May 24  2008 ../example/wgas1.map
+-rw-r--r--+ 1 krthornt  staff    79M May 24  2008 ../example/wgas1.ped
+```
+
+The binary input is also way faster to read in.
+
+OK, so if the binary format is smaller and faster, it seems to be a win. But, it gets rid of our ability to multiply marker positions by -1 to exclude them.  It [looks like](http://pngu.mgh.harvard.edu/~purcell/plink/dataman.shtml#exclude) we can provide SNP exclusion lists, and that this can be done at the stage where binary files are generated.
+
+It is also possible to [remove individuals](http://pngu.mgh.harvard.edu/~purcell/plink/dataman.shtml#remove) using a file of individuals to exclude.  Again, this can be done when making binary files.
 
 Random notes about PLINK
 ====
