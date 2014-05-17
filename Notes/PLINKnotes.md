@@ -305,4 +305,81 @@ Various insights copy/pasted from their website:
 1. If an input file is compressed (gzip compression) and ends in the .gz extension, PLINK will automatically decompress it (if compiled with ZLIB support).  This appears to only apply to the [meta analysis module](http://pngu.mgh.harvard.edu/~purcell/plink/metaanal.shtml).  Lame.
 
 
+How permutation works in PLINK:
+===
 
+This section corresponds to PLINK 1.07.
+
+From helper.cpp,
+
+```{cpp}
+void permute(vector<long int> &a)
+{
+    // generate random permutation of 0..n-1
+    // where n is a.size();
+
+    const long int n = a.size( );
+    
+    for( long int i = 0; i < n; i++ )
+        a[ i ] = i;
+    
+    for( long int j = 1; j < n; j++ )
+    {
+        long int pos = CRandom::rand(j+1);
+        long int tmp = a[ j ];
+
+        a[ j ] = a[ pos ];
+        a[ pos ] = tmp;
+    }
+}
+```
+
+The above is called in perm.cpp as follows
+
+```{cpp}
+void Perm::permuteInCluster()
+{
+
+  // Store remapped IDs
+  vector<vector< long int> > i(ns);
+  
+  // Permute phenotypes, within cluster
+  for (int k=0; k<ns; k++)
+    {
+      vector<long int> p(s[k].size());
+      permute(p);
+      i[k]=p;
+    }
+
+  //////////////////////////
+  // Post-permutation:
+  // Iterate over clusters { s[][] }
+  // i[][] holds the permuted codes
+  // s[][] points to individuals (non-missing)
+  
+  // Genotype =           sample[s[j][k]];      
+  // Matching phenotype = sample[s[j][(int)i[j][k]]];	    
+
+  // Create pheno[] with label-swapped codes
+  for (int j=0; j<s.size(); j++)
+    for (int k=0; k<s[j].size(); k++)
+      P.sample[s[j][k]]->pperson = P.sample[s[j][(int)i[j][k]]];
+  
+}
+```
+
+
+It is pretty easy to see that permutation is swapping phenotypes amongst individuals w/in the same [cluster](http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#clst).  (By default, there is one cluster in an analysis.)
+
+Finally, PLINK sets the seed once and only once, in plink.cpp:
+
+```{cpp}
+  if ( par::random_seed == 0 )
+    CRandom::srand(time(0));
+  else
+    CRandom::srand( par::random_seed );
+```
+
+All of the above is important because it means the following:
+
+1.  We can use 1 seed for each analysis.  In other words, HT gets 1 seed, BD another, etc.  Further, each subset of SNPs within an analysis uses __the same seed__, and therefore the permutation order is held constant genome-wide, because the individuals used in the analysis will be held constant genome-wide (e.g., the only exclusions of individuals will be based on the exclusion lists that come with the WTCCC data).
