@@ -13,3 +13,8 @@ Then, to get $10^6$ permutations:
 plink --file fake --assoc --map3 --mperm 1000000 --mperm-save-all
 ```
 
+Requirements on HPC:
+
+```
+module load krthornt/libsequence/1.8.0
+```
