@@ -1,0 +1,1 @@
+A tool to take [ms](http://home.uchicago.edu/rhudson1/source/mksamples.html) output and create a PED/MAP file pair for use with PLINK.
