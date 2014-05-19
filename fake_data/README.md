@@ -8,7 +8,7 @@ ms 12000 1 -s 500 | ./ms2plink fake.ped fake.map
 
 Then, to get $10^6$ permutations:
 
-``{sh}
+```{sh}
 #We use --map3 b/c we do not have the 3rd column in the map file, which is position in cM.
 plink --file fake --assoc --map3 --mperm 1000000 --mperm-save-all
 ```
