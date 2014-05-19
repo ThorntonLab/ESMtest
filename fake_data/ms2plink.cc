@@ -47,7 +47,7 @@ int main( int argc, char ** argv )
 		<< "rs" << SNP++ << ' ' //SNP label
 		<< int( double(100000)**p) << '\n'; //position
     }
-  cout << mapbuffer.str();
+
   ofstream pedout(pedfile),mapout(mapfile);
   pedout << pedbuffer.str();
   mapout << mapbuffer.str();
