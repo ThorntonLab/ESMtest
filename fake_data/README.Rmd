@@ -142,3 +142,12 @@ The bounds on permutation on HPC
 In the last section, 3e6 perms of 250 markers in 6k individuals is `r 3e6*250` calculations of the chi-squared statistic.  In the WTCCC data, chr2 has the larged number of markers, which is less than 50,000.  If we assum that resources is a function of the total number of calculations done, then we predict we can do `r 3e6*250/5e4` permutations of a data set with 50k markers.  If so, then we would require `r 3e6/1.5e4` array job tasks to permute each chromosome, and we would generate that many __random number seeds__ ahead of time, so that each chromosome's permutation order is the same.
 
 OK, so here are the results of permuting 6,000 individuals with 50,000 makers 15,000 times:
+
+```{r,echo=FALSE}
+par(mfrow=c(1,2))
+big=read.table("bigperms.txt")
+hist(big$V1/60,xlab="Run time (minutes)",main="Big permutation")
+hist(big$V2/(4*1024),xlab="Peak RAM use (MB)",main="Big permutation")
+```
+
+Mean run time is `r mean(big$V1/60)`, and RAM use is totally fine.  The down side is that the program does much more writing to disk, which bogs things down.  It may be useful to try a much bigger job and see if and /fast-scratch and/or /dfs1 can handle it.  This is clearly the _easiest_ procedure, as there will be less to "stitch" together after doing the perms.
