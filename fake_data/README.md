@@ -44,7 +44,7 @@ I ran the script testperms.sh, which permuts 250 snps 1 million times.
 #$ -q krt
 #$ -t 1-64
 
-module load krthornt/plink/1.07
+module load krthornt/plsink/1.07
 module load krthornt/libsequence/1.8.0
 
 cd $SGE_O_WORKDIR
@@ -85,4 +85,48 @@ There is a massive difference in RAM use, though:
 ![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
 
 
-OK, so the new PLINK makes up the difference by using tons of RAM.   Does it get worse if we do all 3 million perms in 1 run? (That is running now...)
+OK, so the new PLINK makes up the difference by using tons of RAM.   Does it get worse if we do all 3 million perms in 1 run?
+
+This is again for 250 markers in a sample of 3000 controls + 3000 cases, but now 3e6 permutations:
+
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
+
+
+So, that is pretty amazing.  Mean run time only goes up to 6.5667 minutes.  RAM use goes through the roof, though.
+
+__IMPORTANT:__ PLINK1.90a's permutation files contain the observed statistics on the first line!!!!!!!  These will need to be skipped!!!
+
+The script generating the last figure is:
+```{sh}
+#!/bin/bash
+
+#$ -N PERMS
+#$ -q krt
+#$ -t 1-64
+#$ -pe openmp 4
+#module load krthornt/plink/1.07
+module load plink/1.90a
+module load krthornt/libsequence/1.8.0
+
+cd $SGE_O_WORKDIR
+SEED1=`echo "$SGE_TASK_ID*$RANDOM"|bc -l`
+SEED3=`echo "$SGE_TASK_ID*$RANDOM"|bc -l`
+SEED2=`echo "$SGE_TASK_ID*$RANDOM"|bc -l`
+
+ms 12000 1 -s 250 -seed $SEED1 $SEED2 $SEED3 | ~/src/ESMtest/fake_data/ms2plink testdata.$SGE_TASK_ID.ped testdata.$SGE_TASK_ID.map
+#Make binary input files
+plink --noweb --file testdata.$SGE_TASK_ID --make-bed --map3 --out testdata.$SGE_TASK_ID --silent
+#Do perms
+/usr/bin/time -f "%e %M" -o ptime1millionP190.$SGE_TASK_ID.txt plink --noweb --bfile testdata.$SGE_TASK_ID --assoc --map3 --mperm 3000000 --mperm-save-all --hwe 1e-6 --out testdata.$SGE_TASK_ID --silent
+
+#We cannot suppress the log file, but we can delete it:
+rm -f testdata.$SGE_TASK_ID.log
+
+#After running a job like this, the original .bed and .map files should probably be gzipped and tarred up
+```
+
+The bounds on permutation on HPC
+===
+In the last section, 3e6 perms of 250 markers in 6k individuals is 7.5 &times; 10<sup>8</sup> calculations of the chi-squared statistic.  In the WTCCC data, chr2 has the larged number of markers, which is less than 50,000.  If we assum that resources is a function of the total number of calculations done, then we predict we can do 1.5 &times; 10<sup>4</sup> permutations of a data set with 50k markers.  If so, then we would require 200 array job tasks to permute each chromosome, and we would generate that many __random number seeds__ ahead of time, so that each chromosome's permutation order is the same.
+
+OK, so here are the results of permuting 6,000 individuals with 50,000 makers 15,000 times:
