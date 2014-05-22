@@ -36,7 +36,7 @@ module load krthornt/libsequence/1.8.0
 
 #Results
 
-I ran the script testperms.sh, which permuts 250 snps $10^6$ times.
+I ran the script testperms.sh, which permuts 250 snps 1 million times.
 
 ```
 #!/bin/bash
@@ -78,15 +78,9 @@ What happens if we use PLINK 1.90a?  The answer is that it is a ton faster:
 ![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2.png) 
 
 
-Now, the mean run time is NA __minutes__.  
+Now, the mean run time is 4.4804 __minutes__.  
 
 There is a massive difference in RAM use, though:
-
-```r
-par(mfrow = c(1, 2))
-hist(x$V2/(4 * 1024), xlab = "Peak RAM use (MB)", main = "PLINK 1.07")
-hist(x.p190$V2/(4 * 1024), xlab = "Peak RAM use (MB)", main = "PLINK 1.90a")
-```
 
 ![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
 
