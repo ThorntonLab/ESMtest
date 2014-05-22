@@ -72,3 +72,23 @@ The distribution of run times looks like:
 The mean run time is 0.9671 days, with a max of 1.0023 days.
 
 Given that we will need to do 3 million perms, and we have a 3 day run-time limit on the pub64 queue, it is probably safest to limit the permutations to 175 or 200 SNP chunkks (as run time should be linear in the number of markers).
+
+What happens if we use PLINK 1.90a?  The answer is that it is a ton faster:
+
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2.png) 
+
+
+Now, the mean run time is NA __minutes__.  
+
+There is a massive difference in RAM use, though:
+
+```r
+par(mfrow = c(1, 2))
+hist(x$V2/(4 * 1024), xlab = "Peak RAM use (MB)", main = "PLINK 1.07")
+hist(x.p190$V2/(4 * 1024), xlab = "Peak RAM use (MB)", main = "PLINK 1.90a")
+```
+
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
+
+
+OK, so the new PLINK makes up the difference by using tons of RAM.   Does it get worse if we do all 3 million perms in 1 run? (That is running now...)
