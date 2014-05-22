@@ -6,7 +6,7 @@
 ms 12000 1 -s 500 | ./ms2plink fake.ped fake.map
 ```
 
-##Then, to get $10^6$ permutations:
+##Then, to get 1 million permutations:
 
 ```{sh}
 #We use --map3 b/c we do not have the 3rd column in the map file, which is position in cM.
@@ -71,4 +71,4 @@ The distribution of run times looks like:
 
 The mean run time is 0.9671 days, with a max of 1.0023 days.
 
-Given that we will need to do $3 \times 10^6$ perms, and we have a 3 day run-time limit on the pub64 queue, it is probably safest to limit the permutations to 175 or 200 SNP chunkks (as run time should be linear in the number of markers).
+Given that we will need to do 3 million perms, and we have a 3 day run-time limit on the pub64 queue, it is probably safest to limit the permutations to 175 or 200 SNP chunkks (as run time should be linear in the number of markers).
