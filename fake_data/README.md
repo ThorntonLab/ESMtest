@@ -89,10 +89,33 @@ OK, so the new PLINK makes up the difference by using tons of RAM.   Does it get
 
 This is again for 250 markers in a sample of 3000 controls + 3000 cases, but now 3e6 permutations:
 
-![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
+
+```
+## Warning: cannot open file 'timesP1903e6.txt': No such file or directory
+```
+
+```
+## Error: cannot open the connection
+```
+
+```
+## Error: object 'x.p1903e6' not found
+```
+
+```
+## Error: object 'x.p1903e6' not found
+```
 
 
-So, that is pretty amazing.  Mean run time only goes up to 6.5667 minutes.  RAM use goes through the roof, though.
+So, that is pretty amazing.  Mean run time only goes up to 
+
+```
+
+Error in mean(x.p1903e6$V1/(60)) : object 'x.p1903e6' not found
+
+```
+
+ minutes.  RAM use goes through the roof, though.
 
 __IMPORTANT:__ PLINK1.90a's permutation files contain the observed statistics on the first line!!!!!!!  These will need to be skipped!!!
 
@@ -130,3 +153,10 @@ The bounds on permutation on HPC
 In the last section, 3e6 perms of 250 markers in 6k individuals is 7.5 &times; 10<sup>8</sup> calculations of the chi-squared statistic.  In the WTCCC data, chr2 has the larged number of markers, which is less than 50,000.  If we assum that resources is a function of the total number of calculations done, then we predict we can do 1.5 &times; 10<sup>4</sup> permutations of a data set with 50k markers.  If so, then we would require 200 array job tasks to permute each chromosome, and we would generate that many __random number seeds__ ahead of time, so that each chromosome's permutation order is the same.
 
 OK, so here are the results of permuting 6,000 individuals with 50,000 makers 15,000 times:
+
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
+
+
+Mean run time is 18.2375 minutes, and RAM use is totally fine.  The down side is that the program does much more writing to disk, which bogs things down.  It may be useful to try a much bigger job and see if and /fast-scratch and/or /dfs1 can handle it.  This is clearly the _easiest_ procedure, as there will be less to "stitch" together after doing the perms.
+
+Also, this is the _worst-case_ scenario, and is actually about 10k more markers than chr2 has in the WTCCC data.
