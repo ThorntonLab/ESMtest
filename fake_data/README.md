@@ -157,4 +157,6 @@ OK, so here are the results of permuting 6,000 individuals with 50,000 makers 15
 ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
 
 
-Mean run time is 18.2375, and RAM use is totally fine.  The down side is that the program does much more writing to disk, which bogs things down.  It may be useful to try a much bigger job and see if and /fast-scratch and/or /dfs1 can handle it.  This is clearly the _easiest_ procedure, as there will be less to "stitch" together after doing the perms.
+Mean run time is 18.2375 minutes, and RAM use is totally fine.  The down side is that the program does much more writing to disk, which bogs things down.  It may be useful to try a much bigger job and see if and /fast-scratch and/or /dfs1 can handle it.  This is clearly the _easiest_ procedure, as there will be less to "stitch" together after doing the perms.
+
+Also, this is the _worst-case_ scenario, and is actually about 10k more markers than chr2 has in the WTCCC data.
