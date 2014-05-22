@@ -89,33 +89,10 @@ OK, so the new PLINK makes up the difference by using tons of RAM.   Does it get
 
 This is again for 250 markers in a sample of 3000 controls + 3000 cases, but now 3e6 permutations:
 
-
-```
-## Warning: cannot open file 'timesP1903e6.txt': No such file or directory
-```
-
-```
-## Error: cannot open the connection
-```
-
-```
-## Error: object 'x.p1903e6' not found
-```
-
-```
-## Error: object 'x.p1903e6' not found
-```
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
 
 
-So, that is pretty amazing.  Mean run time only goes up to 
-
-```
-
-Error in mean(x.p1903e6$V1/(60)) : object 'x.p1903e6' not found
-
-```
-
- minutes.  RAM use goes through the roof, though.
+So, that is pretty amazing.  Mean run time only goes up to 6.5667 minutes.  RAM use goes through the roof, though.
 
 __IMPORTANT:__ PLINK1.90a's permutation files contain the observed statistics on the first line!!!!!!!  These will need to be skipped!!!
 
