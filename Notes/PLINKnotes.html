@@ -502,6 +502,8 @@ thornton01:binary_test krthornt$ ls -lhrt ../example/wgas1.*
 
 <h1>How permutation works in PLINK:</h1>
 
+<p><strong>NOTE:</strong> this is all moot as PLINK 1.90 is so much faster and is written with big servers in mind.</p>
+
 <p>This section corresponds to PLINK 1.07.</p>
 
 <p>From helper.cpp,</p>
@@ -574,6 +576,18 @@ thornton01:binary_test krthornt$ ls -lhrt ../example/wgas1.*
 
 <ol>
 <li> We can use 1 seed for each analysis.  In other words, HT gets 1 seed, BD another, etc.  Further, each subset of SNPs within an analysis uses <strong>the same seed</strong>, and therefore the permutation order is held constant genome-wide, because the individuals used in the analysis will be held constant genome-wide (e.g., the only exclusions of individuals will be based on the exclusion lists that come with the WTCCC data).</li>
+</ol>
+
+<h1>Differences b/w PLINK 1.07 and PLINK 1.90</h1>
+
+<p>The two versions are <em>mostly</em> the same vis-a-via command line options.  However, there are differences:</p>
+
+<ol>
+<li> PLINK 1.90 permutations:  &ndash;model mperm=value vs &ndash;model &ndash;mperm value</li>
+<li> &ndash;map3 not necessarya in PLINK1.90.  Map file format is auto-detected</li>
+<li> &ndash;noweb is currently not implemented in PLINK 1.90</li>
+<li> PLINK 1.90 is multi-threaded.  Use &ndash;thread value to set the MAX # of threads to user.</li>
+<li> PLINK 1.90 can cap RAM use.  Use &ndash;memory MB to set the max RAM use in megabytes.</li>
 </ol>
 
 </body>

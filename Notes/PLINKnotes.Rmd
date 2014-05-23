@@ -308,6 +308,8 @@ Various insights copy/pasted from their website:
 How permutation works in PLINK:
 ===
 
+__NOTE:__ this is all moot as PLINK 1.90 is so much faster and is written with big servers in mind.
+
 This section corresponds to PLINK 1.07.
 
 From helper.cpp,
@@ -383,3 +385,17 @@ Finally, PLINK sets the seed once and only once, in plink.cpp:
 All of the above is important because it means the following:
 
 1.  We can use 1 seed for each analysis.  In other words, HT gets 1 seed, BD another, etc.  Further, each subset of SNPs within an analysis uses __the same seed__, and therefore the permutation order is held constant genome-wide, because the individuals used in the analysis will be held constant genome-wide (e.g., the only exclusions of individuals will be based on the exclusion lists that come with the WTCCC data).
+
+Differences b/w PLINK 1.07 and PLINK 1.90
+=====
+The two versions are _mostly_ the same vis-a-via command line options.  However, there are differences:
+
+1.  PLINK 1.90 permutations:  --model mperm=value vs --model --mperm value
+2.  --map3 not necessarya in PLINK1.90.  Map file format is auto-detected
+3.  --noweb is currently not implemented in PLINK 1.90
+4.  PLINK 1.90 is multi-threaded.  Use --thread value to set the MAX # of threads to user.
+5.  PLINK 1.90 can cap RAM use.  Use --memory MB to set the max RAM use in megabytes.
+
+I am having the following issues with PLINK 1.90:
+
+1.  I cannot permute a data set of 3,000 cases + 3,000 controls w/50,000 markers 3 millions times.  It runs the association tests, and then exits.  Not at all sure why.  Currently testing...
