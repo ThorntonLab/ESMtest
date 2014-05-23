@@ -398,4 +398,4 @@ The two versions are _mostly_ the same vis-a-via command line options.  However,
 
 I am having the following issues with PLINK 1.90:
 
-1.  I cannot permute a data set of 3,000 cases + 3,000 controls w/50,000 markers 3 millions times.  It runs the association tests, and then exits.  Not at all sure why.  Currently testing...
+1.  I cannot permute a data set of 3,000 cases + 3,000 controls w/50,000 markers 3 millions times.  It runs the association tests, and then exits.  Not at all sure why.  Currently testing.

@@ -137,3 +137,21 @@ OK, so here are the results of permuting 6,000 individuals with 50,000 makers 15
 Mean run time is 18.2375 minutes, and RAM use is totally fine.  The down side is that the program does much more writing to disk, which bogs things down.  It may be useful to try a much bigger job and see if and /fast-scratch and/or /dfs1 can handle it.  This is clearly the _easiest_ procedure, as there will be less to "stitch" together after doing the perms.
 
 Also, this is the _worst-case_ scenario, and is actually about 10k more markers than chr2 has in the WTCCC data.
+
+So how many perms of a 50k marker data set (3k controls + 3k cases) can we actually do?  I am testing, starting at 15,000 perms which works.
+
+Testing on a single simulated replicate:
+
+1.  15k perms = OK
+2.  150k perms = OK  (RAM use is getting big!!!! About 60GB)
+3.  1.5e6 perms = Does not run.  No explanation as to why in the logs.  Nothing printed to STDERR
+4.  1e6 perms = Nope.
+5.  5e5 perms = YES!
+6.  7.5e5 perms = YES!
+
+Monitoring the runs reveals the following:
+
+1.  As you do more perms, PLINK needs way more RAM.  That's pretty obvious.
+2.  On our 512GB nodes, O(1e6) perms takes more RAM than is available on the node, so the program just exits.
+
+This creates a tradeoff b/w most effective use of CPU resources vs. creating the fewest output files.
