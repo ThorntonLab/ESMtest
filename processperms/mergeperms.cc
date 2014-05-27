@@ -14,7 +14,6 @@
 #include <string>
 #include <vector>
 
-
 using namespace std;
 using namespace boost::program_options;
 
@@ -24,7 +23,6 @@ struct options
  */
 {
   string mapfile,outfile;
-  unsigned nperms_per_file;
   vector<string> infiles;
   bool convert;
   //constructor for empty object
@@ -33,7 +31,6 @@ struct options
 
 options::options(void) : mapfile(string()),
 			 outfile(string()),
-			 nperms_per_file(0u),
 			 infiles( vector<string>() ),
 			 convert(true)
 {
@@ -48,12 +45,6 @@ const unsigned MBUFFER = 10*1024*1024;
 int main( int argc, char ** argv )
 {
   options O = process_argv( argc, argv );
-
-  string line; //this is a line from the input file
-  istringstream ibuffer; //We will turn each line into a buffer for reading
-  ostringstream obuffer;
-  double x;
-
   gzFile gzout = gzopen( O.outfile.c_str(),"w" );
   if (gzout == NULL )
     {
@@ -65,59 +56,33 @@ int main( int argc, char ** argv )
 
   for( unsigned infile = 0 ; infile < O.infiles.size() ; ++infile )
     {
-      ifstream in( O.infiles[infile].c_str() );
-      if( ! in )
+      gzFile gzin = gzopen( O.infiles[infile].c_str(),"r" );
+      if (gzin == NULL )
 	{
-	  //Bad!
-	  cerr << "Error, could not open " 
-	       << O.infiles[infile]
+	  cerr << "Error, could not open "
+	       << O.infiles[infile] 
 	       << " for reading\n";
 	  exit(10);
 	}
-      unsigned LC = 0; //line count
-      while(! in.eof() )
-	{
-	  ++LC;
-	  getline(in,line);
-	  in >> ws; //ws is part of namespace std, and serves to "chomp" any extraenous whitespace
+      unsigned nmarkers;
+      gzread( gzin, &nmarkers, sizeof(unsigned) );
+      cerr << nmarkers << '\n';
 
-	  if( (LC==1 && infile==0) || (LC>1 && infile) )
-	    /*
-	      Only process the first line of a perm file (which is the observed values)
-	      if we are dealing with the first file
-	     */
+      vector<double> perms(nmarkers);
+      unsigned nrecs=0;
+      int rv;
+      do
+	{
+	  rv = gzread( gzin, &perms[0], nmarkers*sizeof(double) );
+	  //obuff.write( reinterpret_cast< char * >(&perms[0]), nmarkers*sizeof(double) );
+	  if ( rv != -1 && rv != 0)
 	    {
-	      istringstream ibuffer(line);
-	      while(! ibuffer.eof() )
-		{
-		  ibuffer >> x >> ws;
-		  if (O.convert) //input is chi-squared, and we will turn into p-value
-		    {
-		      double pv = gsl_cdf_chisq_Q(x,1.); //chi-sq w/one degree of freedom
-		      obuffer.write( reinterpret_cast<char *>(&pv),sizeof(double) );
-		    }
-		  else //input is already a p-value, so leave it untouched
-		    {
-		      obuffer.write( reinterpret_cast<char *>(&x),sizeof(double) );
-		    }
-		  //Is buffer full, write it to file and clear it
-		  if( obuffer.str().size() >= MBUFFER )
-		    {
-		      gzwrite( gzout, obuffer.str().c_str(), obuffer.str().size() );
-		      obuffer.str( string() );//reset to an empty string
-		    }
-		}
-	      /*
-		Pro tip: you have to check for a non-empty buffer.
-		This occurs when you have < MBUFFER reads near the end of the file
-	      */
-	      if( ! obuffer.str().empty() )
-		{
-		  gzwrite( gzout, obuffer.str().c_str(), obuffer.str().size() );
-		  obuffer.str( string() );//reset to an empty string
-		}
+	      gzwrite( gzout,
+		       reinterpret_cast< char * >(&perms[0]), nmarkers*sizeof(double) );
 	    }
 	}
+      while(! gzeof( gzin ) );
+      gzclose(gzin);
     }
   gzclose(gzout);
 }
@@ -131,18 +96,23 @@ options process_argv( int argc, char ** argv )
     ("help,h", "Produce help message")
     ("mapfile,m",value<string>(&rv.mapfile)->default_value(string()),"The .map file from PLINK")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is binary and gzipped")
-    ("nperms,n",value<unsigned>(&rv.nperms_per_file)->default_value(0),"Number of permutations per input file")
     ("convert,c",value<bool>(&rv.convert)->default_value(true),"Convert chi-squared to p-value")
     ;
 
+  variables_map vm;
+  store( command_line_parser(argc, argv).options(desc).allow_unregistered().run(), vm );
+  notify(vm);
+
+  
   parsed_options parsed = 
     command_line_parser(argc, argv).options(desc).allow_unregistered().run(); 
-
-  if ( argc == 1 )
+  
+  if ( argc == 1 || vm.count("help") )
     {
       cerr << desc << '\n';
       exit(0);
     }
+  /*
   else //check if --help/-h was input
     {
       for( unsigned i = 0 ; i < parsed.options.size() ; ++i )
@@ -154,7 +124,7 @@ options process_argv( int argc, char ** argv )
 	    }
 	}
     }
+  */
   rv.infiles = collect_unrecognized(parsed.options, include_positional);
-
   return rv;
 }
