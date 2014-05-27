@@ -113,7 +113,7 @@ int main( int argc, char ** argv )
 	{
 	  for( unsigned i = 0 ; i < nspaces ; ++i )
 	    {
-	      rv = fscanf(ifp,"%lf",&buffer[val++]);
+	      rv = fscanf(ifp,"%lf",&buffer[val]);
 	      if( O.convert )
 		{
 		  buffer[val] = gsl_cdf_chisq_Q(buffer[val],1.);
