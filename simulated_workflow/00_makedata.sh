@@ -23,3 +23,6 @@ plink --noweb --file fake --make-bed --map3 --out fake --silent
 
 #The .ped file is no longer needed
 rm -f fake.ped
+
+#delete the log file
+rm -f fake.log

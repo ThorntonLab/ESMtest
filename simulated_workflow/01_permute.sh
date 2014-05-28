@@ -6,6 +6,7 @@
 #$ -N PERMDATA
 #$ -hold_jid MAKEDATA
 #$ -t 1-5
+#$ -o /dev/null
 
 #Modify as needed for your system
 module load plink/1.90a
@@ -26,3 +27,7 @@ $1/processperms/perms2gz -i fake.$SGE_TASK_ID.mperm.dump.all -o fake.$SGE_TASK_I
 #delete named pipe
 rm -f fake.$SGE_TASK_ID.mperm.dump.all
 
+#Delete other needless output
+rm -f fake.$SGE_TASK_ID.log
+rm -f fake.$SGE_TASK_ID.assoc.mperm
+rm -f fake.$SGE_TASK_ID.assoc
