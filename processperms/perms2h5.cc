@@ -4,7 +4,7 @@
 //other boost stuff
 #include <boost/bind.hpp>
 
-#include <H5cpp.h>
+#include <H5Cpp.h>
 //Headers for gzip output (C language)
 //#include <zlib.h>
 
