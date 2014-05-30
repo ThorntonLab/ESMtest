@@ -306,7 +306,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     delete d;
 
     //ok, now we write a big matrix of the permuted values
-    hsize_t chunk_dims2[2] = {1000, nmarkers};
+    hsize_t chunk_dims2[2] = {1, nmarkers};
     hsize_t maxdims2[2] = {H5S_UNLIMITED,nmarkers};
     hsize_t datadims[2] = {0,nmarkers};
     hsize_t offsetdims[2] = {0,0};
