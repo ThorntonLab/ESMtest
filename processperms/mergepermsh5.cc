@@ -7,6 +7,9 @@
 //Headers for gzip output (C language)
 #include <zlib.h>
 
+//hdf5 library
+#include <H5Cpp.h>
+
 //Headers to conver chi-squared statistic into chi-squared p-value.  GNU Scientific Library (C language)
 #include <gsl/gsl_cdf.h>
 
@@ -17,15 +20,17 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <algorithm>
 
 /*
   Require zlib 1.2.7 or greater.  Compilation fails if this is not true.
   The ZLIB_VERNUM is defined in zlib.h
 */
-BOOST_STATIC_ASSERT(ZLIB_VERNUM >= 0x1270);
+//BOOST_STATIC_ASSERT(ZLIB_VERNUM >= 0x1270);
 
 using namespace std;
 using namespace boost::program_options;
+using namespace H5;
 
 struct options
 /*
@@ -56,7 +61,13 @@ int main( int argc, char ** argv )
 {
   options O = process_argv( argc, argv );
 
- //Process the map file
+  //Open our hdf5 output file
+  H5File *file = new H5File( O.outfile.c_str() , H5F_ACC_TRUNC );
+
+  //Create group for marker info
+  Group * group = new Group(file->createGroup("/Markers"));
+
+  //Process the map file
   ifstream in(O.mapfile.c_str());
   if ( ! in )
     {
@@ -65,36 +76,96 @@ int main( int argc, char ** argv )
       exit(10);
     }
   string chrom,id;
-  int pos,len;
+  int pos,longest_chrom=0,longest_id=0;
   ostringstream mapbuffer;
-  unsigned maprecords=0;
+  int maprecords=0;//this will also be the dim of our data space
+  vector<unsigned> indexes,poss;
+  vector<string> ids,chroms;
   while(! in.eof() )
     {
       in >> chrom >> id >> pos >> ws;
-      ++maprecords;
-      len = id.size();
-      mapbuffer.write( reinterpret_cast<char*>(&len),sizeof(unsigned) );
-      mapbuffer.write( id.c_str(), len*sizeof(char) );
-      id = chrom.size();
-      mapbuffer.write( reinterpret_cast<char*>(&len),sizeof(unsigned) );
-      mapbuffer.write( chrom.c_str(), len*sizeof(char) );
-      mapbuffer.write( reinterpret_cast<char*>(&pos),sizeof(int) );
+      longest_chrom= max(longest_chrom,int(chrom.length()));
+      longest_id = max(longest_id,int(id.length()));
+      ids.push_back( id );
+      poss.push_back(pos );
+      chroms.push_back(chrom);
+      indexes.push_back( maprecords++ );
     }
+  //H5 data spaces
+  hsize_t dims[1];
+  dims[0] = maprecords;
 
-  gzFile gzout = gzopen( O.outfile.c_str(),"w" );
-  if (gzout == NULL )
+  DSetCreatPropList ds_creatplist;  // create dataset creation prop list
+  ds_creatplist.setChunk( 1, dims );  // then modify it for compression
+  ds_creatplist.setDeflate( 9 );
+
+  DataSpace * dataspace = new DataSpace(1,dims);
+
+  DataSet * dataset = new DataSet(file->createDataSet("/Markers/positions",
+						      PredType::NATIVE_INT,
+						      *dataspace,
+						      ds_creatplist));
+  dataset->write( &*poss.begin(),PredType::NATIVE_INT );
+
+  delete dataset;
+
+  dataset = new DataSet(file->createDataSet("/Markers/indexes",
+					    PredType::NATIVE_INT,
+					    *dataspace,
+					    ds_creatplist));
+
+  dataset->write( &*indexes.begin(), 	    
+		  PredType::NATIVE_INT );
+
+  delete dataset;
+
+  const char * stringtemp[maprecords];
+  for( unsigned i = 0 ; i < maprecords ; ++i )
     {
-      cerr << "Error, could not open " 
-	   << O.outfile 
-	   << " for writing\n";
-      exit(10);
+      stringtemp[i] = ids[i].c_str();
     }
 
-  //write the map file info
-  gzwrite( gzout, reinterpret_cast<char *>(&maprecords), sizeof(unsigned) );
+  //delete dataspace;
 
-  gzwrite( gzout, mapbuffer.str().c_str(), mapbuffer.str().size() );
- 
+  //dataspace = new  new DataSpace(1,dims);
+  dataset = new DataSet(file->createDataSet("/Markers/ids",
+					    //H5Tcopy(H5T_C_S1),
+					    StrType(H5::PredType::C_S1, H5T_VARIABLE),
+					    //PredType::C_S1,
+					    //PredType::NATIVE_CHAR,
+					    *dataspace,
+					    ds_creatplist));
+
+  cerr << stringtemp[0] << ' ' << stringtemp[1] << '\n';
+  dataset->write(stringtemp,
+		 StrType(H5::PredType::C_S1, H5T_VARIABLE));
+		 //PredType::C_S1);//PredType::NATIVE_CHAR);
+  //for( 
+
+  delete dataset;
+
+  dataset = new DataSet(file->createDataSet("/Markers/chromos",
+					    //H5Tcopy(H5T_C_S1),
+					    StrType(H5::PredType::C_S1, H5T_VARIABLE),
+					    //PredType::C_S1,
+					    //PredType::NATIVE_CHAR,
+					    *dataspace,
+					    ds_creatplist));
+
+ for( unsigned i = 0 ; i < maprecords ; ++i )
+    {
+      stringtemp[i] = chroms[i].c_str();
+    }
+
+  dataset->write(stringtemp,
+		 StrType(H5::PredType::C_S1, H5T_VARIABLE));
+
+  delete group;
+
+  //Now, go through the perms
+
+  group = new Group(file->createGroup("/Perms"));
+  unsigned long permno=1;
   for( unsigned infile = 0 ; infile < O.infiles.size() ; ++infile )
     {
       gzFile gzin = gzopen( O.infiles[infile].c_str(),"r" );
@@ -127,17 +198,28 @@ int main( int argc, char ** argv )
       do
 	{
 	  rv = gzread( gzin, &perms[0], nmarkers*sizeof(double) );
-	  //obuff.write( reinterpret_cast< char * >(&perms[0]), nmarkers*sizeof(double) );
 	  if ( rv != -1 && rv != 0)
 	    {
-	      gzwrite( gzout,
-		       reinterpret_cast< char * >(&perms[0]), nmarkers*sizeof(double) );
+	      ostringstream gname;
+	      gname << "/Perms/perm" << permno++;
+
+	      dataset = new DataSet(file->createDataSet(gname.str().c_str(),
+							PredType::NATIVE_DOUBLE,
+							*dataspace,
+							ds_creatplist));
+	      dataset->write( &*perms.begin(),	
+			      PredType::NATIVE_DOUBLE );
+	      delete dataset;
 	    }
 	}
       while(! gzeof( gzin ) );
       gzclose(gzin);
     }
-  gzclose(gzout);
+  
+  delete group;
+  delete dataspace;
+
+  file->close();
 }
 
 options process_argv( int argc, char ** argv )
