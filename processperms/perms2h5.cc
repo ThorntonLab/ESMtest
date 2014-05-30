@@ -271,7 +271,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	exit(10);
       }
 
-    vector< double > data(nmarkers);
+    vector< double > data(10*nmarkers);
     int repno;
     fscanf(ifp,"%d",&repno);
     //The first line is the observed data
@@ -306,7 +306,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     delete d;
 
     //ok, now we write a big matrix of the permuted values
-    hsize_t chunk_dims2[2] = {1, nmarkers};
+    hsize_t chunk_dims2[2] = {10, nmarkers};
     hsize_t maxdims2[2] = {H5S_UNLIMITED,nmarkers};
     hsize_t datadims[2] = {0,nmarkers};
     hsize_t offsetdims[2] = {0,0};
@@ -321,12 +321,13 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 					cparms));
 
     DataSpace memspace(2,recorddims);
+    size_t READ = 0;
     while (fscanf(ifp,"%d",&repno) != -1 )
       {
 	//Read in the data...
-	for( size_t i = 0 ; i < nmarkers ; ++i )
+	for( size_t i = 0 ; i < nmarkers ; ++i,++READ )
 	  {
-	    int rv = fscanf(ifp,"%lf",&data[i]);
+	    int rv = fscanf(ifp,"%lf",&data[READ]);
 	    if( rv == 0 || rv == -1 )
 	      {
 		cerr << "Error, input stream ended before expected...\n";
@@ -334,14 +335,22 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	      }
 	    if(O.convert)
 	      {
-		data[i] = gsl_cdf_chisq_Q(data[i],1.);
+		data[READ] = gsl_cdf_chisq_Q(data[READ],1.);
 	      }
 	  }
-	++datadims[0];
-	offsetdims[0]=datadims[0]-1;
-	d->extend( datadims );
-	*dataspace = d->getSpace();
-	dataspace->selectHyperslab(H5S_SELECT_SET, recorddims , offsetdims);
-	d->write( data.data(), PredType::NATIVE_DOUBLE, memspace,*dataspace );
+	if(READ == 10*nmarkers)
+	  {
+	    READ=0;
+	    for( int block = 0 ; block < 10 ; ++block,READ+=nmarkers )
+	      {
+		++datadims[0];
+		offsetdims[0]=datadims[0]-1;
+		d->extend( datadims );
+		*dataspace = d->getSpace();
+		dataspace->selectHyperslab(H5S_SELECT_SET, recorddims , offsetdims);
+		d->write( &data[READ], PredType::NATIVE_DOUBLE, memspace,*dataspace );
+	      }
+	    READ=0;
+	  }
       }
 }
