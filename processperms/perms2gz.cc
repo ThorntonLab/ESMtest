@@ -69,6 +69,11 @@ int main( int argc, char ** argv )
 
   FILE * ifp = !O.infile.empty() ? fopen( O.infile.c_str(),"r" ) : stdin;
 
+  if ( ifp == NULL )
+    {
+      cerr << "Error, could not open stream for reading\n";
+      exit(10);
+    }
   string line;
   int c;
   unsigned nspaces = 0;
