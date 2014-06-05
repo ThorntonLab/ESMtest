@@ -22,7 +22,7 @@
   Require zlib 1.2.7 or greater.  Compilation fails if this is not true.
   The ZLIB_VERNUM is defined in zlib.h
 */
-BOOST_STATIC_ASSERT(ZLIB_VERNUM >= 0x1270);
+BOOST_STATIC_ASSERT(ZLIB_VERNUM >= 0x1250);
 
 using namespace std;
 using namespace boost::program_options;
