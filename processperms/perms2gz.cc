@@ -35,7 +35,7 @@ struct options
   options(void);
 };
 
-options::options(void) : strip(true),
+options::options(void) : strip(false),
 			 convert(true),
 			 infile(string()),
 			 outfile(string())
@@ -149,7 +149,7 @@ options process_argv( int argc, char ** argv )
   options_description desc("Reads PLINK permuted data table from IFP.  Reformats to a binary-format data stream that is then written to a gzipped file.");
   desc.add_options()
     ("help,h", "Produce help message")
-    ("nostrip","Do not strip the observed data from the file (default is to strip)")
+    ("strip","Strip the observed data from the file (default is not to strip)")
     ("noconvert","Do not convert input into a p-value.  Default is to assume that the input is a chi^2 statistic with 1 degree of freedom")
     ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name.  Default is to read from stdin")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is binary and gzipped")
@@ -165,9 +165,9 @@ options process_argv( int argc, char ** argv )
       exit(0);
     }
 
-  if( vm.count("nostrip") )
+  if( vm.count("strip") )
     {
-      rv.strip = false;
+      rv.strip = true;
     }
 
   if( vm.count("noconvert") )
