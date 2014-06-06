@@ -1,8 +1,5 @@
 #!/bin/bash
 
 #Submit to KRT's queue on UCI HPC
-
-for i in ~/src/ESMtest/simulated_workflow/0*.sh
-do
-    qsub -q krt $i ~/src/ESMtest
-done
+qsub -q krt ~/src/ESMtest/simulated_workflow/00_makedata.sh $1
+qsub -q krt ~/src/ESMtest/simulated_workflow/01_permute.sh $1
