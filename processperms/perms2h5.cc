@@ -34,13 +34,15 @@ struct options
 {
   bool strip,convert;
   string mapfile,infile,outfile;
+  size_t nrecords;
   options(void);
 };
 
 options::options(void) : strip(true),
 			 convert(true),
 			 infile(string()),
-			 outfile(string())
+			 outfile(string()),
+			 nrecords(1)
 {
 }
 
@@ -54,90 +56,9 @@ int main( int argc, char ** argv )
 
   //Create output file
   H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC );
-
   size_t nmarkers = process_mapfile( O, ofile );
   process_perms( O, nmarkers, ofile );
   ofile.close();
-  exit(0);
-  //OK, write this marker info to an H5 file
-
-  /*
-    We will use C-style input, as it is faster.
-
-    The first thing we need to figure out is how many markers were
-    permute.
-
-    The first line that comes out of PLINK 1.90a perms 
-    contains the observed data
-  */
-
-  FILE * ifp = !O.infile.empty() ? fopen( O.infile.c_str(),"r" ) : stdin;
-
-  if ( ifp == NULL )
-    {
-      cerr << "Error, could not open stream for reading\n";
-      exit(10);
-    }
-  string line;
-  int c;
-  unsigned nspaces = 0;
-  do
-    {
-      c = fgetc(ifp);
-      if( ::isspace(c) && c != '\n') 
-	{
-	  ++nspaces;
-	}
-      line += char(c);
-    }
-  while( c != int('\n') ); //read in 1 char at a time until newline
-
-
-  unsigned rep;
-  double x;
-  if( !O.strip ) //if we do not skip the observed data
-    {
-      istringstream temp(line);
-      while(!temp.eof())
-	{
-	  temp >> x >> ws;
-	  if( O.convert )
-	    {
-	      x = gsl_cdf_chisq_Q(x,1);
-	    }
-	}
-    }
-
-  //Max buffer size will be 10MB uncompressed
-  unsigned MBUFFER = 5*1024*1024/sizeof(double);
-  double * buffer = new double[MBUFFER];
-  size_t val = 0;
-  int rv;
-  while(! feof( ifp ) )
-    {
-      rv = fscanf(ifp,"%u",&rep);
-      if(rv != -1)
-	{
-	  for( unsigned i = 0 ; i < nspaces ; ++i )
-	    {
-	      rv = fscanf(ifp,"%lf",&buffer[val]);
-	      if( O.convert )
-		{
-		  cerr << buffer[val] << " -> ";
-		  buffer[val] = gsl_cdf_chisq_Q(buffer[val],1.);
-		  cerr << buffer[val] << '\n';
-		}
-	      val++;
-	      if( val >= MBUFFER )
-		{
-		  val=0;
-		}
-	    }
-	}
-    }
-  if(val)
-    {
-    }
   exit(0);
 }
 
@@ -153,6 +74,7 @@ options process_argv( int argc, char ** argv )
     ("mapfile,m",value<string>(&rv.mapfile)->default_value(string()),".map file name.")
     ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name.  Default is to read from stdin")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is binary and gzipped")
+    ("nrecords,n",value<size_t>(&rv.nrecords)->default_value(1),"Number of records to buffer.")
     ;
 
   variables_map vm;
@@ -271,7 +193,14 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	exit(10);
       }
 
-    vector< double > data(10*nmarkers);
+    //vector< double > data(10*nmarkers);
+    // double ** data = new double *[O.nrecords];
+    // for( size_t i = 0 ; i < O.nrecords ; ++i )
+    //   {
+    // 	data[i] = new double[nmarkers];
+    //   }
+    //double * data = new double(O.nrecords*nmarkers);
+    vector<double> data(O.nrecords*nmarkers);
     int repno;
     fscanf(ifp,"%d",&repno);
     //The first line is the observed data
@@ -292,6 +221,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     
     cparms.setChunk( 1, chunk_dims );
     cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
+
   
     DataSpace * dataspace = new DataSpace(1,chunk_dims, maxdims);
 
@@ -310,47 +240,83 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     hsize_t maxdims2[2] = {H5S_UNLIMITED,nmarkers};
     hsize_t datadims[2] = {0,nmarkers};
     hsize_t offsetdims[2] = {0,0};
-    hsize_t recorddims[2] = {1,nmarkers};
+    hsize_t recorddims[2] = {O.nrecords,nmarkers};
     cparms.setChunk( 2, chunk_dims2 );
     cparms.setDeflate( 6 );
 
-    dataspace = new DataSpace(2, datadims, maxdims2);
+    //dataspace = new DataSpace(2, recorddims, maxdims2);
+    DataSpace fspace(2,datadims,maxdims2);
     d = new DataSet(ofile.createDataSet("/Perms/permutations",
 					PredType::NATIVE_DOUBLE,
-					*dataspace,
+					fspace,
 					cparms));
 
     DataSpace memspace(2,recorddims);
-    size_t READ = 0;
-    while (fscanf(ifp,"%d",&repno) != -1 )
+    //ofile.close();exit(10);
+    //while (fscanf(ifp,"%d",&repno) != -1 )
+    while(!feof(ifp))
       {
+	int rv = 1;
+	size_t I = 0;
+	for( size_t i = 0 ; (rv!=-1&&rv!=0) && i < O.nrecords ; ++i )
+	  {
+	    repno = -1;
+	    rv=fscanf(ifp,"%d",&repno);
+	    if( rv == 0 || rv == -1 || feof(ifp ) )
+	      {
+		return; //we have hit the end of the file
+	      }
+	    for( size_t j = 0 ; j < nmarkers ; ++j,++I )
+	      {
+		rv = fscanf(ifp,"%lf",&data[I]);
+		if(rv==0||rv==-1)
+		  {
+		    cerr << "Error, input stream ended before expected...\n";
+		    ofile.close();
+		    exit(10);
+		  }
+		if(O.convert)
+		  {
+		    data[I]=gsl_cdf_chisq_Q(data[I],1.);
+		  }
+	      }
+	  }
+	datadims[0] += O.nrecords;
+	d->extend( datadims );
+	DataSpace * dspace = new DataSpace( d->getSpace() );
+	dspace->selectHyperslab(H5S_SELECT_SET,recorddims,offsetdims);
+	//d->write(data.data(), PredType::NATIVE_DOUBLE,memspace,*dspace);
+	d->write(data.data(), PredType::NATIVE_DOUBLE,memspace,*dspace);
+	delete dspace;
+	offsetdims[0] += O.nrecords;
+	//ofile.close();exit(10);
 	//Read in the data...
-	for( size_t i = 0 ; i < nmarkers ; ++i,++READ )
-	  {
-	    int rv = fscanf(ifp,"%lf",&data[READ]);
-	    if( rv == 0 || rv == -1 )
-	      {
-		cerr << "Error, input stream ended before expected...\n";
-		exit(10);
-	      }
-	    if(O.convert)
-	      {
-		data[READ] = gsl_cdf_chisq_Q(data[READ],1.);
-	      }
-	  }
-	if(READ == 10*nmarkers)
-	  {
-	    READ=0;
-	    for( int block = 0 ; block < 10 ; ++block,READ+=nmarkers )
-	      {
-		++datadims[0];
-		offsetdims[0]=datadims[0]-1;
-		d->extend( datadims );
-		*dataspace = d->getSpace();
-		dataspace->selectHyperslab(H5S_SELECT_SET, recorddims , offsetdims);
-		d->write( &data[READ], PredType::NATIVE_DOUBLE, memspace,*dataspace );
-	      }
-	    READ=0;
-	  }
+	// for( size_t i = 0 ; i < nmarkers ; ++i,++READ )
+	//   {
+	//     int rv = fscanf(ifp,"%lf",&data[READ]);
+	//     if( rv == 0 || rv == -1 )
+	//       {
+	// 	cerr << "Error, input stream ended before expected...\n";
+	// 	exit(10);
+	//       }
+	//     if(O.convert)
+	//       {
+	// 	data[READ] = gsl_cdf_chisq_Q(data[READ],1.);
+	//       }
+	//   }
+	// if(READ == 10*nmarkers)
+	//   {
+	//     READ=0;
+	//     for( int block = 0 ; block < 10 ; ++block,READ+=nmarkers )
+	//       {
+	// 	++datadims[0];
+	// 	offsetdims[0]=datadims[0]-1;
+	// 	d->extend( datadims );
+	// 	*dataspace = d->getSpace();
+	// 	dataspace->selectHyperslab(H5S_SELECT_SET, recorddims , offsetdims);
+	// 	d->write( &data[READ], PredType::NATIVE_DOUBLE, memspace,*dataspace );
+	//       }
+	//     READ=0;
+	//   }
       }
 }
