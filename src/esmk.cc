@@ -168,12 +168,14 @@ void run_test( const esm_options & O )
   do
     {
       pair<size_t,size_t> indexes = get_indexes( pos_0, left,right );
+      size_t nmarkers = indexes.second - indexes.first + 1;
       left += O.jumpsize;
       right += O.jumpsize;
       if( indexes.first != numeric_limits<size_t>::max() )
 	{
-	  cerr << left << ' ' << right << ' ' << pos_0[indexes.first] << ' ' << pos_0[indexes.second] << '\n';
+	  cerr << left << ' ' << right << ' ' << pos_0[indexes.first] << ' ' << pos_0[indexes.second] << ' ' << nmarkers << '\n';
 	}
+      //Iterate over perm files
     }
   while(left <= LPOS);  //not a great way to terminate.  Look @ libseq for guidance
 }
