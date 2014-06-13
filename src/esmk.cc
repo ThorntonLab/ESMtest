@@ -149,7 +149,6 @@ pair<size_t,size_t> get_indexes( const vector<int> & pos,
       return make_pair( numeric_limits<size_t>::max(),
 			numeric_limits<size_t>::max() );
     }
-  cerr << *ci1 << ' ' << *ci2 << '\n';
   return make_pair( ci1-pos.begin(), pos.rend()-ci2-1 );
 }
 				 
