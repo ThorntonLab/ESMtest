@@ -172,9 +172,13 @@ void run_test( const esm_options & O )
       right += O.jumpsize;
       if( indexes.first != numeric_limits<size_t>::max() )
 	{
+	  /*
+	    Skip windows w/no markers.
+	    Iterate over perm files now
+	  */
 	  cerr << left << ' ' << right << ' ' << pos_0[indexes.first] << ' ' << pos_0[indexes.second] << ' ' << nmarkers << '\n';
 	}
-      //Iterate over perm files
+
     }
   while(left <= LPOS);  //not a great way to terminate.  Look @ libseq for guidance
 }
