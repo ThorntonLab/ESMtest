@@ -5,8 +5,7 @@
 #include <boost/bind.hpp>
 
 #include <H5Cpp.h>
-//Headers for gzp output (C language)
-//#include <zlib.h>
+
 
 //Headers to conver chi-squared statistic into chi-squared p-value.  GNU Scientific Library (C language)
 #include <gsl/gsl_cdf.h>
@@ -20,11 +19,6 @@
 #include <algorithm>
 #include <cstdlib>
 
-//C headers
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-//#include <unistd.h>
 
 using namespace std;
 using namespace boost::program_options;
