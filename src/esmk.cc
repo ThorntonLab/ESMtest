@@ -17,6 +17,9 @@
 #include <cmath>
 #include <algorithm>
 
+//Headers for this project
+#include <H5util.hpp>
+
 using namespace std;
 using namespace boost::program_options;
 using namespace H5;
@@ -29,10 +32,16 @@ struct esm_options
 };
 
 esm_options parseargs( int argc, char ** argv );
+bool permfilesOK( const esm_options & O );
 
 int main( int argc, char ** argv )
 {
   esm_options O = parseargs(argc,argv); 
+  if( !permfilesOK(O) )
+    {
+      cerr << "Error with permutation files\n";
+      exit(10);
+    }
 }
 
 esm_options parseargs( int argc, char ** argv )
@@ -81,4 +90,25 @@ esm_options parseargs( int argc, char ** argv )
       exit(0);
     }
   return rv;
+}
+
+//make sure each perm file contains the same markers, etc.
+bool permfilesOK( const esm_options & O )
+{
+  if( O.infiles.empty() ) { return false; }
+
+  vector<string> markers_0 = read_strings(O.infiles[0].c_str(),"/Markers/IDs");
+  vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
+
+  for ( size_t i = 1 ; i < O.infiles.size() ; ++i )
+    {
+      vector<string> markers_i = read_strings(O.infiles[i].c_str(),"/Markers/IDs");
+      vector<int> pos_i = read_ints(O.infiles[i].c_str(),"/Markers/pos");
+      if( markers_0 != markers_i || pos_0 != pos_i )
+	{
+	  return false;
+	}  
+    }
+
+  return true;
 }
