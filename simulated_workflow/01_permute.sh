@@ -20,9 +20,9 @@ mkfifo fake.$SGE_TASK_ID.mperm.dump.all
 
 SEED=$SGE_TASK_ID
 #Do this chunk of perms
-plink --noweb --bfile fake --assoc mperm=500000 --map3 --mperm-save-all --hwe 1e-6 --out fake.$SGE_TASK_ID  --seed $SEED --threads $CORES  &
+plink --noweb --bfile fake --assoc mperm=5000 --map3 --mperm-save-all --hwe 1e-6 --out fake.$SGE_TASK_ID  --seed $SEED --threads $CORES  &
 #Process permutations in chunks of 50 records at a time
-/usr/bin/time -f "%e %M" -o perm2h5.$SGE_TASK_ID.txt ~/src/ESMtest/processperms/perms2h5 -i fake.$SGE_TASK_ID.mperm.dump.all -o fake.$SGE_TASK_ID.perms.h5 -m fake.map -n 50 
+/usr/bin/time -f "%e %M" -o perm2h5.$SGE_TASK_ID.txt ~/src/ESMtest/processperms/perms2h5 -i fake.$SGE_TASK_ID.mperm.dump.all -o fake.$SGE_TASK_ID.perms.h5 -a fake.assoc -n 50 
 #delete named pipe
 rm -f fake.$SGE_TASK_ID.mperm.dump.all
 
