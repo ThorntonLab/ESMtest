@@ -206,15 +206,14 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     int repno;
     fscanf(ifp,"%d",&repno);
     //The first line is the observed data
-    for( size_t i = 0 ; i < nmarkers ; ++i )
+    for( size_t i = 0 ; i < nmarkers-1 ; ++i )
       {
 	int rv = fscanf(ifp,"%lf",&data[i]);
 	if(O.convert)
 	  {
-	    data[i] = gsl_cdf_chisq_Q(data[i],1.);
+	    data[i] = -log10(gsl_cdf_chisq_Q(data[i],1.));
 	  }
       }
-
     ofile.createGroup("/Perms");
 
     DSetCreatPropList cparms;
@@ -268,7 +267,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	      {
 		return; //we have hit the end of the file
 	      }
-	    for( size_t j = 0 ; j < nmarkers ; ++j,++I )
+	    for( size_t j = 0 ; j < nmarkers-1 ; ++j,++I )
 	      {
 		rv = fscanf(ifp,"%lf",&data[I]);
 		if(rv==0||rv==-1)
@@ -279,7 +278,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 		  }
 		if(O.convert)
 		  {
-		    data[I]=gsl_cdf_chisq_Q(data[I],1.);
+		    data[I]=-log10(gsl_cdf_chisq_Q(data[I],1.));
 		  }
 	      }
 	  }
