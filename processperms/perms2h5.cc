@@ -5,7 +5,7 @@
 #include <boost/bind.hpp>
 
 #include <H5Cpp.h>
-//Headers for gzip output (C language)
+//Headers for gzp output (C language)
 //#include <zlib.h>
 
 //Headers to conver chi-squared statistic into chi-squared p-value.  GNU Scientific Library (C language)
@@ -33,7 +33,7 @@ struct options
  */
 {
   bool strip,convert;
-  string mapfile,infile,outfile;
+  string assocfile,infile,outfile;
   size_t nrecords;
   options(void);
 };
@@ -47,7 +47,7 @@ options::options(void) : strip(true),
 }
 
 options process_argv( int argc, char ** argv );
-size_t process_mapfile( const options & O, H5File & ofile );
+size_t process_assocfile( const options & O, H5File & ofile );
 void process_perms( const options & O, size_t nmarkers, H5File & ofile );
 
 int main( int argc, char ** argv )
@@ -56,7 +56,7 @@ int main( int argc, char ** argv )
 
   //Create output file
   H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC );
-  size_t nmarkers = process_mapfile( O, ofile );
+  size_t nmarkers = process_assocfile( O, ofile );
   process_perms( O, nmarkers, ofile );
   ofile.close();
   exit(0);
@@ -66,14 +66,14 @@ options process_argv( int argc, char ** argv )
 {
   options rv;
 
-  options_description desc("Reads PLINK permuted data table from IFP.  Reformats to a binary-format data stream that is then written to a gzipped file.");
+  options_description desc("Reads PLINK permuted data table from IFP.  Reformats to a HDF5 file.");
   desc.add_options()
     ("help,h", "Produce help message")
     ("nostrip","Do not strip the observed data from the file (default is to strip)")
     ("noconvert","Do not convert input into a p-value.  Default is to assume that the input is a chi^2 statistic with 1 degree of freedom")
-    ("mapfile,m",value<string>(&rv.mapfile)->default_value(string()),".map file name.")
-    ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name.  Default is to read from stdin")
-    ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is binary and gzipped")
+    ("assoc,a",value<string>(&rv.assocfile)->default_value(string()),"The output file from plink --assoc")
+    ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name containing permutations.  Default is to read from stdin")
+    ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is HDF5")
     ("nrecords,n",value<size_t>(&rv.nrecords)->default_value(1),"Number of records to buffer.")
     ;
 
@@ -89,9 +89,9 @@ options process_argv( int argc, char ** argv )
 
   bool bad_input = false;
 
-  if (! vm.count("mapfile") )
+  if (! vm.count("assoc") )
     {
-      cerr << "Error, no map file name specified\n";
+      cerr << "Error, no association output file name specified\n";
       bad_input = true;
     }
 
@@ -113,15 +113,15 @@ options process_argv( int argc, char ** argv )
   return rv;
 }
 
-size_t process_mapfile( const options & O, H5File & ofile )
+size_t process_assocfile( const options & O, H5File & ofile )
 /*
   Write map data into an h5 group called "Markers"
  */
 {
-  ifstream mapin( O.mapfile.c_str() );
-  if (! mapin )
+  ifstream associn( O.assocfile.c_str() );
+  if (! associn )
     {
-      cerr << "Error, " << O.mapfile
+      cerr << "Error, " << O.assocfile
 	   << " could not be opened for reading\n";
       exit(10);
     }
@@ -129,11 +129,13 @@ size_t process_mapfile( const options & O, H5File & ofile )
   vector<string> markers,chroms;
   vector< const char * > marker_str,chrom_str;
   vector< int > vpos;
-  string chrom,marker;
+  string chrom,marker,line;
   int pos;
-  while( !mapin.eof() )
+  getline( associn, line );
+  while( !associn.eof() )
     {
-      mapin >> chrom >> marker >> pos >> ws;
+      associn >> chrom >> marker >> pos >> ws;
+      getline( associn, line );
       chroms.push_back( chrom );
       markers.push_back( marker );
       vpos.push_back( pos );
