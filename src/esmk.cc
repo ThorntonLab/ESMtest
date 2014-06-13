@@ -16,6 +16,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <set>
 
 //Headers for this project
 #include <H5util.hpp>
@@ -97,14 +98,20 @@ bool permfilesOK( const esm_options & O )
 {
   if( O.infiles.empty() ) { return false; }
 
+  vector<string> chroms_0 = read_strings(O.infiles[0].c_str(),"/Markers/chr");
+  set<string> sc_0(chroms_0.begin(),chroms_0.end());
+  if( sc_0.size() > 1 ) { return false; }
   vector<string> markers_0 = read_strings(O.infiles[0].c_str(),"/Markers/IDs");
   vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
 
   for ( size_t i = 1 ; i < O.infiles.size() ; ++i )
     {
+      vector<string> chroms_i = read_strings(O.infiles[0].c_str(),"/Markers/chr");
+      set<string> sc_i(chroms_i.begin(),chroms_i.end());
+      if( sc_i.size() > 1 ) { return false; }
       vector<string> markers_i = read_strings(O.infiles[i].c_str(),"/Markers/IDs");
       vector<int> pos_i = read_ints(O.infiles[i].c_str(),"/Markers/pos");
-      if( markers_0 != markers_i || pos_0 != pos_i )
+      if( markers_0 != markers_i || sc_0 != sc_i || pos_0 != pos_i )
 	{
 	  return false;
 	}  
