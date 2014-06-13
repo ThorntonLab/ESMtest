@@ -21,6 +21,9 @@
 #include <cstdlib>
 
 //C headers
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 //#include <unistd.h>
 
 using namespace std;
@@ -33,7 +36,7 @@ struct options
  */
 {
   bool strip,convert;
-  string assocfile,infile,outfile;
+  string bimfile,infile,outfile;
   size_t nrecords;
   options(void);
 };
@@ -47,7 +50,7 @@ options::options(void) : strip(true),
 }
 
 options process_argv( int argc, char ** argv );
-size_t process_assocfile( const options & O, H5File & ofile );
+size_t process_bimfile( const options & O, H5File & ofile );
 void process_perms( const options & O, size_t nmarkers, H5File & ofile );
 
 int main( int argc, char ** argv )
@@ -56,7 +59,7 @@ int main( int argc, char ** argv )
 
   //Create output file
   H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC );
-  size_t nmarkers = process_assocfile( O, ofile );
+  size_t nmarkers = process_bimfile( O, ofile );
   process_perms( O, nmarkers, ofile );
   ofile.close();
   exit(0);
@@ -71,7 +74,7 @@ options process_argv( int argc, char ** argv )
     ("help,h", "Produce help message")
     ("nostrip","Do not strip the observed data from the file (default is to strip)")
     ("noconvert","Do not convert input into a p-value.  Default is to assume that the input is a chi^2 statistic with 1 degree of freedom")
-    ("assoc,a",value<string>(&rv.assocfile)->default_value(string()),"The output file from plink --assoc")
+    ("bim,b",value<string>(&rv.bimfile)->default_value(string()),"The bim file (map file for binary PLINK data)")
     ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name containing permutations.  Default is to read from stdin")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is HDF5")
     ("nrecords,n",value<size_t>(&rv.nrecords)->default_value(1),"Number of records to buffer.")
@@ -89,9 +92,9 @@ options process_argv( int argc, char ** argv )
 
   bool bad_input = false;
 
-  if (! vm.count("assoc") )
+  if (! vm.count("bim") )
     {
-      cerr << "Error, no association output file name specified\n";
+      cerr << "Error, no bim file name specified\n";
       bad_input = true;
     }
 
@@ -113,15 +116,15 @@ options process_argv( int argc, char ** argv )
   return rv;
 }
 
-size_t process_assocfile( const options & O, H5File & ofile )
+size_t process_bimfile( const options & O, H5File & ofile )
 /*
   Write map data into an h5 group called "Markers"
  */
 {
-  ifstream associn( O.assocfile.c_str() );
-  if (! associn )
+  ifstream bimin( O.bimfile.c_str() );
+  if (! bimin )
     {
-      cerr << "Error, " << O.assocfile
+      cerr << "Error, " << O.bimfile
 	   << " could not be opened for reading\n";
       exit(10);
     }
@@ -129,13 +132,12 @@ size_t process_assocfile( const options & O, H5File & ofile )
   vector<string> markers,chroms;
   vector< const char * > marker_str,chrom_str;
   vector< int > vpos;
-  string chrom,marker,line;
+  string chrom,marker,dummy,line;
   int pos;
-  getline( associn, line );
-  while( !associn.eof() )
+  while( !bimin.eof() )
     {
-      associn >> chrom >> marker >> pos >> ws;
-      getline( associn, line );
+      bimin >> chrom >> marker >> dummy >> pos >> ws;
+      getline( bimin, line );
       chroms.push_back( chrom );
       markers.push_back( marker );
       vpos.push_back( pos );
