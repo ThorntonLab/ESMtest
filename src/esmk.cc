@@ -32,6 +32,25 @@ struct esm_options
   vector<string> infiles;
 };
 
+struct within
+/*
+  Function object.   
+  Returns true if val is within range
+  specified by (left,right)
+ */
+{
+  typedef bool result_type;
+  inline bool operator()(const int & val,
+			 const int & left,
+			 const int & right) const
+  {
+    return (val >= left && val <= right);
+  }
+};
+
+pair<size_t,size_t> get_indexes( const vector<int> & pos,
+				 const int & left,
+				 const int & right );
 esm_options parseargs( int argc, char ** argv );
 bool permfilesOK( const esm_options & O );
 void run_test( const esm_options & O );
@@ -124,16 +143,6 @@ bool permfilesOK( const esm_options & O )
   return true;
 }
 
-struct within
-{
-  typedef bool result_type;
-  inline bool operator()(const int & val,
-			 const int & left,
-			 const int & right) const
-  {
-    return (val >= left && val <= right);
-  }
-};
 pair<size_t,size_t> get_indexes( const vector<int> & pos,
 				 const int & left,
 				 const int & right )
