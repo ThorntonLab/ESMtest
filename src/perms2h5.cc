@@ -5,8 +5,7 @@
 #include <boost/bind.hpp>
 
 #include <H5Cpp.h>
-//Headers for gzp output (C language)
-//#include <zlib.h>
+
 
 //Headers to conver chi-squared statistic into chi-squared p-value.  GNU Scientific Library (C language)
 #include <gsl/gsl_cdf.h>
@@ -20,11 +19,6 @@
 #include <algorithm>
 #include <cstdlib>
 
-//C headers
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-//#include <unistd.h>
 
 using namespace std;
 using namespace boost::program_options;
@@ -292,34 +286,5 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	d->write(data.data(), PredType::NATIVE_DOUBLE,memspace,*dspace);
 	delete dspace;
 	offsetdims[0] += O.nrecords;
-	//ofile.close();exit(10);
-	//Read in the data...
-	// for( size_t i = 0 ; i < nmarkers ; ++i,++READ )
-	//   {
-	//     int rv = fscanf(ifp,"%lf",&data[READ]);
-	//     if( rv == 0 || rv == -1 )
-	//       {
-	// 	cerr << "Error, input stream ended before expected...\n";
-	// 	exit(10);
-	//       }
-	//     if(O.convert)
-	//       {
-	// 	data[READ] = gsl_cdf_chisq_Q(data[READ],1.);
-	//       }
-	//   }
-	// if(READ == 10*nmarkers)
-	//   {
-	//     READ=0;
-	//     for( int block = 0 ; block < 10 ; ++block,READ+=nmarkers )
-	//       {
-	// 	++datadims[0];
-	// 	offsetdims[0]=datadims[0]-1;
-	// 	d->extend( datadims );
-	// 	*dataspace = d->getSpace();
-	// 	dataspace->selectHyperslab(H5S_SELECT_SET, recorddims , offsetdims);
-	// 	d->write( &data[READ], PredType::NATIVE_DOUBLE, memspace,*dataspace );
-	//       }
-	//     READ=0;
-	//   }
       }
 }
