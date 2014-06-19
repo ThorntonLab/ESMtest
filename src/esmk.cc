@@ -1,4 +1,10 @@
-//libhdf5
+//HPC modules needed: hdf5/1.8.11 boost/1.54.0 zlib/1.2.7
+
+/*
+  libhdf5 -- the C++ interface is in this header.
+
+  This also exposes the C interface.
+*/
 #include <H5Cpp.h>
 
 //Command line parsing using boost (C++)
@@ -7,24 +13,30 @@
 //other boost stuff
 #include <boost/bind.hpp>
 
-//zlib
+//zlib is included b/c it probably makes sense to write the output as a gzip file
 #include <zlib.h>
 
 //Standard c++
-#include <iostream>
-#include <string>
-#include <vector>
-#include <cmath>
-#include <algorithm>
-#include <set>
+#include <iostream>   //let's us print to screen
+#include <string>     //strings = containers of characters
+#include <vector>     //vectors = containers of other things
+#include <cmath>      //The C++ version of C's math.h (puts the C functions in namespace std)
+#include <algorithm>  //find, sort, etc.
+#include <set>        //A set is a container, see http://www.cplusplus.com/reference/set/set/
 
-//Headers for this project
+/*
+  This is a header that I wrote.
+
+  It contains overly-simple functions
+  to read in 1-dimensional data from H5 files
+*/
 #include <H5util.hpp>
 
 using namespace std;
 using namespace boost::program_options;
 using namespace H5;
 
+//This is a data type to hold command-line options
 struct esm_options
 {
   string outfile;
@@ -48,11 +60,24 @@ struct within
   }
 };
 
+/*
+  get_indexes is passed a list of positions on a chromosome and
+  the left and right boundaries of a window.
+
+  The return value is the pair of indexes within pos
+  whose values are >= left and <= right.
+
+  If no position exists satisfying one of these criteria,
+  the maximum value of a size_t is returned.
+ */
 pair<size_t,size_t> get_indexes( const vector<int> & pos,
 				 const int & left,
 				 const int & right );
+//Parse command line options
 esm_options parseargs( int argc, char ** argv );
+//Ask if all the permutation files contain the same marker info
 bool permfilesOK( const esm_options & O );
+//Runs the esm_k test on the data
 void run_test( const esm_options & O );
 
 int main( int argc, char ** argv )
@@ -163,31 +188,62 @@ pair<size_t,size_t> get_indexes( const vector<int> & pos,
 				 
 void run_test( const esm_options & O )
 {
+  //Step 1: read in the marker data from the first file in 0.infiles:
+  //1a: the chrom labels
   vector<string> chroms_0 = read_strings(O.infiles[0].c_str(),"/Markers/chr");
   set<string> sc_0(chroms_0.begin(),chroms_0.end());
   chroms_0.clear();
+  //1b: the rsID for the markers
   vector<string> markers_0 = read_strings(O.infiles[0].c_str(),"/Markers/IDs");
+  //1c: the marker positions
   vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
 
+  //Step 2: establish the left and right boundaries of the first window
   int left = 1, right = left + O.winsize - 1;
 
-  unsigned j=0;
-  const int LPOS = *(pos_0.end()-1);
+  //Step 3: go over the current data and make sure that our helper functions are working
+  unsigned j=0; 
+  const int LPOS = *(pos_0.end()-1); //This is the last position in pos_0.  Equivalent to pos[pos.size()-1], but I guess I like to complicate things.
   do
     {
+      //3a: get the indexes in pos_0 corresponding to left- and right- most SNPs in this window
       pair<size_t,size_t> indexes = get_indexes( pos_0, left,right );
+      //3b: count number of markers in this window
       size_t nmarkers = indexes.second - indexes.first + 1;
-      left += O.jumpsize;
-      right += O.jumpsize;
-      if( indexes.first != numeric_limits<size_t>::max() )
+      if( indexes.first != numeric_limits<size_t>::max() ) //If there are SNPs in the window
 	{
 	  /*
 	    Skip windows w/no markers.
-	    Iterate over perm files now
+
+	    This is where modifications need to be made. 
+
+	    The permutation files all need to be processed here, and then the test statistic calculated for each window.
+
+	    For the moment, forget about LD filtering.
+
+	    I believe that the loop will look something like this:
+	    vector<double> chisqs; //store permuted values of chisq in 1 big vector.
+
+	    for( size_t i = 0 ; i < O.infiles.size() ; ++ i )
+	    {
+	    //in here, open the hdf5 file, figure out how many markers are in the 
+	    //interval from (indexes.first,indexes.second), and read them into chisqs.
+
+	    //Useful things to know about std::vector<T>:
+	    //Declare an empty one:
+	    //vector<double> x;
+	    //resize to contain 1,000 doubles
+	    //x.resize( 1000 );
+	    //You'll need to pass the HDF5 library a pointer to where you want to read.
+	    //If that position is size_t POS, 
+	    //then passing &x[POS] passes an array of doubles (double * in C) to HDF5.
+	    //This array will be a sub-array of x, beginning at position POS+1.
+	    }
 	  */
 	  cerr << left << ' ' << right << ' ' << pos_0[indexes.first] << ' ' << pos_0[indexes.second] << ' ' << nmarkers << '\n';
 	}
-
+       left += O.jumpsize;
+      right += O.jumpsize;
     }
-  while(left <= LPOS);  //not a great way to terminate.  Look @ libseq for guidance
+  while(left <= LPOS);  //Possibly not a great way to terminate.  Look @ libseq for guidance
 }
