@@ -88,8 +88,8 @@ vector<double> read_doubles( const char * filename, const char * dsetname )
 
 vector<double> read_doubles_slab( const char * filename, 
 				  const char * dsetname,
-				  const int & start,
-				  const int & len)
+				  const size_t & start,
+				  const size_t & len)
 {
   H5File ifile( filename, H5F_ACC_RDONLY );
   DataSet ds( ifile.openDataSet(dsetname) );
@@ -108,10 +108,31 @@ vector<double> read_doubles_slab( const char * filename,
   count[1]= len;
   //should select a hyperslab which ds.read can reference
   dsp.selectHyperslab(H5S_SELECT_SET,count,offset);
+  
+  //define memspace
 
-  vector<double> receiver(dims_out[0]); //allocate memory to receive
+  hsize_t dimsm[2];
+  dimsm[0]=dims_out[0];
+  dimsm[1]=len;
+  DataSpace memspace(2,dimsm);
+
+  //define hyperslab in memory...this is done so you can go from
+  //high dimensions to lower ones while still in H5
+
+  hsize_t offset_out[2]; //mem offset
+  hsize_t count_out[2]; //
+
+  offset_out[0] = 0;
+  offset_out[1] = 0;
+  count_out[0]  = dims_out[0];
+  count_out[1]  = len;
+  
+  memspace.selectHyperslab( H5S_SELECT_SET, count_out, offset_out );
+  
+
+  vector<double> receiver(dims_out[0]*len); //allocate memory to receive
   IntType intype = ds.getIntType();
-  ds.read( &receiver[0], intype );
+  ds.read( &receiver[0], intype, memspace, dsp);
   return receiver;
 }
 
