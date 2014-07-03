@@ -132,6 +132,7 @@ size_t process_bimfile( const options & O, H5File & ofile )
     {
       bimin >> chrom >> marker >> dummy >> pos >> ws;
       getline( bimin, line );
+      bimin >> ws;
       chroms.push_back( chrom );
       markers.push_back( marker );
       vpos.push_back( pos );
