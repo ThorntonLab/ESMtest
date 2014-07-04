@@ -203,7 +203,8 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     int repno;
     fscanf(ifp,"%d",&repno);
     //The first line is the observed data
-    for( size_t i = 0 ; i < nmarkers-1 ; ++i )
+    //for( size_t i = 0 ; i < nmarkers-1 ; ++i )
+    for( size_t i = 0 ; i < nmarkers ; ++i )
       {
 	int rv = fscanf(ifp,"%lf",&data[i]);
 	if(O.convert)
@@ -264,7 +265,8 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	      {
 		return; //we have hit the end of the file
 	      }
-	    for( size_t j = 0 ; j < nmarkers-1 ; ++j,++I )
+	    //for( size_t j = 0 ; j < nmarkers-1 ; ++j,++I )
+	    for( size_t j = 0 ; j < nmarkers ; ++j,++I )
 	      {
 		rv = fscanf(ifp,"%lf",&data[I]);
 		if(rv==0||rv==-1)
