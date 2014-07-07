@@ -209,7 +209,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	int rv = fscanf(ifp,"%lf",&data[i]);
 	if(O.convert)
 	  {
-	    data[i] = -log10(gsl_cdf_chisq_Q(data[i],1.));
+	    data[i] = (data[i]!=1.) ? -log10(gsl_cdf_chisq_Q(data[i],1.)) : 0.;
 	  }
       }
     ofile.createGroup("/Perms");
