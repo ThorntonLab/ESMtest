@@ -18,7 +18,8 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
-
+#include <cctype>
+#include <cstring>
 
 using namespace std;
 using namespace boost::program_options;
@@ -29,7 +30,7 @@ struct options
   This object represents the command-line options
  */
 {
-  bool strip,convert;
+  bool strip,convert,verbose;
   string bimfile,infile,outfile;
   size_t nrecords;
   options(void);
@@ -37,6 +38,7 @@ struct options
 
 options::options(void) : strip(true),
 			 convert(true),
+			 verbose(false),
 			 infile(string()),
 			 outfile(string()),
 			 nrecords(1)
@@ -72,6 +74,7 @@ options process_argv( int argc, char ** argv )
     ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name containing permutations.  Default is to read from stdin")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is HDF5")
     ("nrecords,n",value<size_t>(&rv.nrecords)->default_value(1),"Number of records to buffer.")
+    ("verbose,v","Write process info to STDERR")
     ;
 
   variables_map vm;
@@ -107,6 +110,11 @@ options process_argv( int argc, char ** argv )
     {
       rv.convert = false;
     }
+
+  if( vm.count("verbose") )
+    {
+      rv.verbose = true;
+    }
   return rv;
 }
 
@@ -136,6 +144,11 @@ size_t process_bimfile( const options & O, H5File & ofile )
       chroms.push_back( chrom );
       markers.push_back( marker );
       vpos.push_back( pos );
+    }
+
+  if ( O.verbose )
+    {
+      cerr << ".bim file contains " << markers.size() << " markers\n";
     }
 
   for( unsigned i = 0 ; i < markers.size() ; ++i )
@@ -192,6 +205,11 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	exit(10);
       }
 
+    if ( O.verbose )
+      {
+	cerr << "Starting to process perms for "
+	     << nmarkers << " markers\n";
+      }
     //vector< double > data(10*nmarkers);
     // double ** data = new double *[O.nrecords];
     // for( size_t i = 0 ; i < O.nrecords ; ++i )
@@ -202,8 +220,9 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     vector<double> data(O.nrecords*nmarkers);
     int repno;
     fscanf(ifp,"%d",&repno);
+
+    char * buffer = new char[100];
     //The first line is the observed data
-    //for( size_t i = 0 ; i < nmarkers-1 ; ++i )
     for( size_t i = 0 ; i < nmarkers ; ++i )
       {
 	int rv = fscanf(ifp,"%lf",&data[i]);
@@ -211,6 +230,11 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	  {
 	    data[i] = (data[i]!=1.) ? -log10(gsl_cdf_chisq_Q(data[i],1.)) : 0.;
 	  }
+      }
+
+    if ( O.verbose )
+      {
+	cerr << "Read in observed data.\n" << endl;
       }
     ofile.createGroup("/Perms");
 
@@ -250,42 +274,57 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 					fspace,
 					cparms));
 
-    DataSpace memspace(2,recorddims);
-    //ofile.close();exit(10);
-    //while (fscanf(ifp,"%d",&repno) != -1 )
+    //DataSpace memspace(2,recorddims);
+    size_t RECSREAD = 0;
     while(!feof(ifp))
       {
 	int rv = 1;
 	size_t I = 0;
-	for( size_t i = 0 ; (rv!=-1&&rv!=0) && i < O.nrecords ; ++i )
+	RECSREAD = 0;
+	for( size_t i = 0 ; !feof(ifp) && i < O.nrecords ; ++i,++RECSREAD )
 	  {
+	    if ( O.verbose )
+	      {
+		cerr << i << ": ";
+	      }
 	    repno = -1;
 	    rv=fscanf(ifp,"%d",&repno);
 	    if( rv == 0 || rv == -1 || feof(ifp ) )
 	      {
-		return; //we have hit the end of the file
+	    	if( O.verbose ) cerr << "return 1\n";
+	    	return; //we have hit the end of the file
 	      }
 	    //for( size_t j = 0 ; j < nmarkers-1 ; ++j,++I )
 	    for( size_t j = 0 ; j < nmarkers ; ++j,++I )
 	      {
+		if(O.verbose) cerr << j << ',' << I << ' ';
 		rv = fscanf(ifp,"%lf",&data[I]);
-		if(rv==0||rv==-1)
-		  {
-		    cerr << "Error, input stream ended before expected...\n";
-		    ofile.close();
-		    exit(10);
-		  }
+		// if( rv == 0 || !feof(ifp) )
+		//   {
+		//     if( O.verbose ) cerr << "converting " << repno << ':' << j << ',' << I << "to nan\n";
+		//     //rv = chew2ws(ifp);
+		//     data[I] = numeric_limits<double>::quiet_NaN();
+		//   }
+		// if ( rv == -1 )
+		// //		if(rv==0||rv==-1)
+		//   {
+		//     cerr << "Error, input stream ended before expected...\n";
+		//     ofile.close();
+		//     exit(10);
+		//   }
 		if(O.convert)
 		  {
-		    data[I]=-log10(gsl_cdf_chisq_Q(data[I],1.));
+		    data[I]= (data[I] != 1.) ? -log10(gsl_cdf_chisq_Q(data[I],1.)) : 0.;
 		  }
 	      }
+	    if(O.verbose) cerr<< endl;
 	  }
-	datadims[0] += O.nrecords;
+	datadims[0] += RECSREAD;//O.nrecords;
+	recorddims[0] = RECSREAD;
+	DataSpace memspace(2,recorddims);
 	d->extend( datadims );
 	DataSpace * dspace = new DataSpace( d->getSpace() );
 	dspace->selectHyperslab(H5S_SELECT_SET,recorddims,offsetdims);
-	//d->write(data.data(), PredType::NATIVE_DOUBLE,memspace,*dspace);
 	d->write(data.data(), PredType::NATIVE_DOUBLE,memspace,*dspace);
 	delete dspace;
 	offsetdims[0] += O.nrecords;
