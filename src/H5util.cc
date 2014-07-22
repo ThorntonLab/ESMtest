@@ -86,6 +86,57 @@ vector<double> read_doubles( const char * filename, const char * dsetname )
   return receiver;
 }
 
+vector<double> read_doubles_slab( const char * filename, 
+				  const char * dsetname,
+				  const size_t & start,
+				  const size_t & len)
+{
+  H5File ifile( filename, H5F_ACC_RDONLY );
+  DataSet ds( ifile.openDataSet(dsetname) );
+  DataSpace dsp(ds.getSpace());
+  int rank_j = dsp.getSimpleExtentNdims();
+  hsize_t dims_out[rank_j];
+  int ndims = dsp.getSimpleExtentDims( dims_out, NULL);
+  
+  //*Define the hyperslab in the dataset; see readdata.cpp in 
+  // the HDF5 group c++ API
+  hsize_t offset[2];
+  hsize_t count[2];
+  offset[0]= 0;
+  offset[1]= start;
+  count[0] = dims_out[0];
+  count[1]= len;
+  //should select a hyperslab which ds.read can reference
+  dsp.selectHyperslab(H5S_SELECT_SET,count,offset);
+  
+  //define memspace
+
+  hsize_t dimsm[2];
+  dimsm[0]=dims_out[0];
+  dimsm[1]=len;
+  DataSpace memspace(2,dimsm);
+
+  //define hyperslab in memory...this is done so you can go from
+  //high dimensions to lower ones while still in H5
+
+  hsize_t offset_out[2]; //mem offset
+  hsize_t count_out[2]; //
+
+  offset_out[0] = 0;
+  offset_out[1] = 0;
+  count_out[0]  = dims_out[0];
+  count_out[1]  = len;
+  
+  memspace.selectHyperslab( H5S_SELECT_SET, count_out, offset_out );
+  
+
+  vector<double> receiver(dims_out[0]*len); //allocate memory to receive
+  IntType intype = ds.getIntType();
+  ds.read( &receiver[0], intype, memspace, dsp);
+  return receiver;
+}
+
+
 void write_strings( const std::vector<string> & data,
 		    const char * dsetname,
 		    H5File ofile )

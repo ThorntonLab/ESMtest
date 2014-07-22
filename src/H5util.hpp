@@ -14,6 +14,11 @@ std::vector<int> read_ints( const char * filename,
 std::vector<double> read_doubles(const char * filename, 
 				 const char * dsetname );
 
+std::vector<double> read_doubles_slab(const char * filename,
+				      const char * dsetname,
+				      const size_t & start,
+				      const size_t & len);
+
 void write_strings( const std::vector<std::string> & data,
 			 const char * dsetname,
 			 H5::H5File ofile );
