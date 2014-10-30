@@ -1,12 +1,4 @@
----
-output: pdf_document
 
----
-```{r, include=FALSE}
-   # add this chunk to end of mycode.rmd
-   file.rename(from="WTCCC_Data.Rmd", 
-               to="README.md")
-```
 #WTCCC Data Conversion for GWAS/ESM Test
 
 WTCCC data came in two main types, the main genotype data and the supporting sample information file. In order to utilize these data in PLINK!, multiple preprocessing steps were taken. The goal being to convert the genotype/sample data into .ped/.map files which PLINK uses.
