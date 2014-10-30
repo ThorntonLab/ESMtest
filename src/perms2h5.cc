@@ -3,6 +3,7 @@
 
 //other boost stuff
 #include <boost/bind.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <H5Cpp.h>
 
@@ -31,7 +32,7 @@ struct options
  */
 {
   bool strip,convert,verbose;
-  string bimfile,infile,outfile;
+  string bimfile,ldfile,infile,outfile;
   size_t nrecords;
   options(void);
 };
@@ -39,6 +40,8 @@ struct options
 options::options(void) : strip(true),
 			 convert(true),
 			 verbose(false),
+			 bimfile(string()),
+			 ldfile(string()),
 			 infile(string()),
 			 outfile(string()),
 			 nrecords(1)
@@ -47,16 +50,18 @@ options::options(void) : strip(true),
 
 options process_argv( int argc, char ** argv );
 size_t process_bimfile( const options & O, H5File & ofile );
+void process_ldfile( const options & O, H5File & ofile );
 void process_perms( const options & O, size_t nmarkers, H5File & ofile );
 
 int main( int argc, char ** argv )
 {
   options O = process_argv( argc, argv );
-
+  // cerr << O.ldfile << '\n';
   //Create output file
   H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC );
   size_t nmarkers = process_bimfile( O, ofile );
   process_perms( O, nmarkers, ofile );
+  process_ldfile( O, ofile ); 
   ofile.close();
   exit(0);
 }
@@ -71,6 +76,7 @@ options process_argv( int argc, char ** argv )
     ("nostrip","Do not strip the observed data from the file (default is to strip)")
     ("noconvert","Do not convert input into a p-value.  Default is to assume that the input is a chi^2 statistic with 1 degree of freedom")
     ("bim,b",value<string>(&rv.bimfile)->default_value(string()),"The bim file (map file for binary PLINK data)")
+    ("linkage,l",value<string>(&rv.ldfile)->default_value(string()),"The LD file (pairwise r^2 from PLINK)")
     ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name containing permutations.  Default is to read from stdin")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is HDF5")
     ("nrecords,n",value<size_t>(&rv.nrecords)->default_value(1),"Number of records to buffer.")
@@ -329,4 +335,72 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	delete dspace;
 	offsetdims[0] += O.nrecords;
       }
+}
+
+void process_ldfile( const options & O, H5File & ofile )
+{
+  
+  ifstream ldf (O.ldfile.c_str());
+  string line;
+  vector<string> lineVector, snpA, snpB;
+  vector<double> rsq;
+  double r2;
+  string::size_type sz;
+  if (ldf.is_open())
+    {
+      while(getline(ldf,line))
+	{
+	  
+	  boost::split(lineVector,line,boost::is_any_of(" "),boost::token_compress_on);
+	  snpA.push_back(lineVector.at(3));
+	  snpB.push_back(lineVector.at(6));
+	  r2 = ::atof( lineVector.at(7).c_str());
+	  //cerr << r2;
+	  //may have to make the rsq's a double
+	  //r2 = stod (lineVector.at(7)); 
+	  rsq.push_back(r2);
+	  
+	}
+      ldf.close();
+    }
+  else cerr <<"Unable to read LD file"<< '\n';
+  
+  ofile.createGroup("/LD");
+  
+  DSetCreatPropList cparms;
+  hsize_t chunk_dims[1] = {snpA.size()};
+  hsize_t maxdims[1] = {snpA.size()};
+
+  cparms.setChunk( 1, chunk_dims );
+  cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
+  
+  DataSpace dataspace(1,chunk_dims, maxdims);
+
+  H5::StrType datatype(H5::PredType::C_S1, H5T_VARIABLE); 
+
+  DataSet snpA_dset = ofile.createDataSet("/LD/snpA",
+					    datatype,
+					    dataspace,
+					    cparms);
+
+  snpA_dset.write(snpA.data(), datatype );
+  
+  DataSet snpB_dset = ofile.createDataSet("/LD/snpB",
+					    datatype,
+					    dataspace,
+					    cparms);
+
+  snpB_dset.write(snpB.data(), datatype );
+  /*for (vector<double>::const_iterator i = rsq.begin();i!=rsq.end();++i)
+    {
+      cerr << *i<< ' ';
+      }*/
+  DataSet rsq_dset = ofile.createDataSet("/LD/rsq",
+					 H5::PredType::NATIVE_DOUBLE,
+					 dataspace,
+					 cparms);
+
+
+  rsq_dset.write( rsq.data(),H5::PredType::NATIVE_DOUBLE );
+
 }

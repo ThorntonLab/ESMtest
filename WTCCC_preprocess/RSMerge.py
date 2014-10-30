@@ -15,7 +15,7 @@ def main():
     #List of UNIQ SNPS, pre made with BASH, should be in disease directory
     SNP_file = open('fixed'+str(chrom)+'.snps','r')
 
-    #READ stuff in
+        #READ stuff in
     mergeArch = {'old':'new'}
 
     for line in merge_file:
@@ -26,20 +26,22 @@ def main():
 
     SNPS= SNP_file.read().splitlines()    
     SNP_file.close()
-
+    nSNPs=[]
     SNP_q = {'id':'index'}
     i = 0
     for a in SNPS:
         if a.strip('rs')in mergeArch:
             b= mergeArch[a.strip('rs')]
+            nSNPs.append('rs'+b)
             SNP_q[b]=i
         else:
+            nSNPs.append(a)
             SNP_q[a.strip('rs')]=i
         i = i + 1
 
     dat = np.zeros((len(SNPS),),dtype=[('chrom','a2'),('rsid','a16'),('pos','a16')])
     dat['chrom']=str(chrom)
-    dat['rsid']=SNPS
+    dat['rsid']=nSNPs
     exclude = []
     for line in pos_file:
         x = line.split()
@@ -49,8 +51,13 @@ def main():
                 exclude.append('rs'+x[0]+'\n')
             else:
                 dat[SNP_q[x[0]]][2]=x[2]
-
-
+                
+    i = 0
+    for line in dat:
+        if len(line[2])==0:
+            dat[i][2]='1'
+        i = i +1
+   
 
     outfile = open(sys.argv[4], 'w')
 

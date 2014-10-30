@@ -18,7 +18,7 @@ TODO:
 
 //other boost stuff
 #include <boost/bind.hpp>
-
+#include <boost/unordered_map.hpp>
 //zlib is included b/c it probably makes sense to write the output as a gzip file
 #include <zlib.h>
 
@@ -33,6 +33,8 @@ TODO:
 #include <thread>
 #include <functional>
 #include <numeric>
+#include <unordered_map>
+#include <utility>
 /*
   This is a header that I wrote.
 
@@ -50,6 +52,7 @@ struct esm_options
 {
   string outfile;
   int winsize,jumpsize,K,nwindows;
+  double LDcutoff;
   vector<string> infiles;
 };
 
@@ -89,11 +92,12 @@ bool permfilesOK( const esm_options & O );
 //Runs the esm_k test on the data
 
 void calc_esm( const vector<double> * data,
-		   const double & ESM_obs,
-		   const size_t & nperms,
-		   const int & nmarkers,
-		   const int & K,
-		   double * ESMP_win);
+	       const double & ESM_obs,
+	       const size_t & nperms,
+	       const int & nmarkers,
+	       const int & K,
+	       double * ESMP_win,
+	       const vector<short> & keep_markers_win);
 
 void run_test( const esm_options & O );
 
@@ -122,6 +126,7 @@ esm_options parseargs( int argc, char ** argv )
     ("jumpsize,j",value<int>(&rv.jumpsize),"Window jump size (bp)")
     ("K,k",value<int>(&rv.K),"Number of markers to use for ESM_k stat in a window.  Must be > 0.")
     ("nwindows,n",value<int> (&rv.nwindows),"Number of windows to bring in at a time")
+    ("LDcutoff,r",value<double> (&rv.LDcutoff), "The R^2 cutoff for LD between SNPs")
     ;
 
   variables_map vm;
@@ -168,7 +173,9 @@ bool permfilesOK( const esm_options & O )
   if( sc_0.size() > 1 ) { return false; }
   vector<string> markers_0 = read_strings(O.infiles[0].c_str(),"/Markers/IDs");
   vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
-
+  vector<string> snpA_0 = read_strings(O.infiles[0].c_str(),"/LD/snpA");
+  vector<string> snpB_0 = read_strings(O.infiles[0].c_str(),"/LD/snpB");
+  
   for ( size_t i = 1 ; i < O.infiles.size() ; ++i )
     {
       vector<string> chroms_i = read_strings(O.infiles[i].c_str(),"/Markers/chr");
@@ -176,7 +183,9 @@ bool permfilesOK( const esm_options & O )
       if( sc_i.size() > 1 ) { return false; }
       vector<string> markers_i = read_strings(O.infiles[i].c_str(),"/Markers/IDs");
       vector<int> pos_i = read_ints(O.infiles[i].c_str(),"/Markers/pos");
-      if( markers_0 != markers_i || sc_0 != sc_i || pos_0 != pos_i )
+      vector<string> snpA_i = read_strings(O.infiles[i].c_str(),"/LD/snpA");
+      vector<string> snpB_i = read_strings(O.infiles[i].c_str(),"/LD/snpB");
+      if( markers_0 != markers_i || sc_0 != sc_i || pos_0 != pos_i || snpA_0 != snpA_i || snpB_0 != snpB_i)
 	{
 	  return false;
 	}  
@@ -208,7 +217,8 @@ void calc_esm( const vector<double> * data,
 	       const size_t & nperms,
 	       const int & nmarkers,
 	       const int & K,
-	       double * ESMP_win)
+	       double * ESMP_win,
+	       const vector<short> & keep_markers_win)
 {
 	      //for each perm in the data
   vector<double> ESM_perm ( nperms );
@@ -234,7 +244,7 @@ void calc_esm( const vector<double> * data,
       vector<double> temp;
       for ( int k =0 ; k < nmarkers ; ++k)
 	{
-	  temp.push_back((*data)[nmarkers*j + k]);
+	  temp.push_back((*data)[nmarkers*j + k]*keep_markers_win[k]);
 	}
       sort( temp.begin(),temp.end(),boost::bind(greater<double>(),_1,_2));
       for ( int k =0 ; k < min(K,nmarkers) ; ++k )
@@ -275,7 +285,25 @@ void run_test( const esm_options & O )
   //1c: the marker positions
   vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
   
- 
+  //get the LD lists:
+  vector<string>snpA = read_strings(O.infiles[0].c_str(),"/LD/snpA");
+  vector<string>snpB = read_strings(O.infiles[0].c_str(),"/LD/snpB");
+  vector<double>rsq = read_doubles(O.infiles[0].c_str(),"/LD/rsq");
+  
+  //LD map takes a pair of snps and returns an R squared value
+  typedef pair<string, string> snp_pair;
+  typedef map<snp_pair, double> LDMap;
+
+  LDMap myld;
+  snp_pair snps;
+  
+  for (size_t i=0; i < snpA.size();++i)
+    {
+      snps = make_pair(snpA[i],snpB[i]);
+      myld.insert(make_pair(snps,rsq[i])); 
+    }
+  
+  
   //Step 2: establish the left and right boundaries of the first set of windows
   int left = 1, right = O.winsize  + O.jumpsize*(O.nwindows-1) + 1;
 
@@ -291,12 +319,10 @@ void run_test( const esm_options & O )
   //While there is at least one valid window in the set
   while( (LPOS - left)>= O.winsize )
     {
-      //cerr << "left = " << left << " right = " << right << '\n';
-      //3a: get the indexes in pos_0 corresponding to left- and right- most SNPs in in the set of windows
+      //get the indexes in pos_0 corresponding to left- and right- most SNPs in in the set of windows
       pair<size_t,size_t> indexes_set = get_indexes(pos_0,left,right);
-      //cerr << "first = " << indexes_set.first << " second = " << indexes_set.second << '\n';
       size_t nmarkers_set = (indexes_set.second - indexes_set.first + 1);
-      //cerr << "marker_set = " << nmarkers_set << '\n';
+      
       if( indexes_set.first != numeric_limits<size_t>::max() ) //If there are SNPs in the window set 
 	{
 	  //the set is either full with n = O.nwindows or it is smaller
@@ -311,16 +337,14 @@ void run_test( const esm_options & O )
 	      int izqui = left + m*O.jumpsize  ;
 	      int derech = izqui + O.winsize;
 	      indexes_win.push_back(get_indexes(pos_0,izqui, derech));
-	      // cerr << "win = " << m <<" first = " << indexes_win[m].first << " second = " << indexes_win[m].second << '\n';
 	      nmarkers_win.push_back(indexes_win[m].second - indexes_win[m].first + 1);
-	       cerr << "marker_win m =" << nmarkers_win[m] << '\n'; 
 	      loci_mid.push_back( (derech + izqui)/2 );
 	    }
 
-      vector<double> ESMP_win ( nwin_set ) ;
-      vector<double> ESM_obs_win ( nwin_set );
-      vector<double> newdata  ;   
-      size_t markers_used = O.K;
+	  vector<double> ESMP_win ( nwin_set ) ;
+	  vector<double> ESM_obs_win ( nwin_set );
+	  vector<double> newdata  ;   
+	  size_t markers_used = O.K;
 
       	 	 
 	  for( size_t i = 0 ; i < O.infiles.size() ; ++i ) 
@@ -333,79 +357,115 @@ void run_test( const esm_options & O )
 		  newdata.push_back(fresh[b]);
 		}
 	    }
-	      //this should be the same, but may as well determine it here
-	    size_t nperms_tot = newdata.size()/nmarkers_set;
-	    //cerr << "nperms = " << nperms_tot << '\n';
-	      //prepare the vector of esm values  for the new values from the file
-	      //we have one ESM value for each perm
-	      //vector of vectors to contain data for all perms in each window
-	    vector< vector<double> > data ( nwin_set );
-	    // cerr << "data size= " << data.size() << '\n';
-	    for ( int m = 0 ; m < nwin_set; ++m)
-	      {
-		if( indexes_win[m].first != numeric_limits<size_t>::max() ){
-		  vector<double> chisq_win( chisq_obs ) ;
-		  sort( chisq_win.begin() + indexes_win[m].first, 
-			chisq_win.begin() + indexes_win[m].second,
-			boost::bind(greater<double>(),_1,_2)
-			);
-		  
-		  double ESM_obs = 0;
-		  size_t n;    
-		  for ( size_t q = indexes_win[m].first; q < indexes_win[m].first + min(markers_used, nmarkers_win[m]); ++q )
-		    {
+	  //this should be the same, but may as well determine it here
+	  size_t nperms_tot = newdata.size()/nmarkers_set;
+	  //cerr << "nperms = " << nperms_tot << '\n';
+	  //prepare the vector of esm values  for the new values from the file
+	  //we have one ESM value for each perm
+	  //vector of vectors to contain data for all perms in each window
+	  vector< vector<double> > data ( nwin_set );
+	  vector< vector<short> > keep_markers_win ( nwin_set );
+	  for ( int m = 0 ; m < nwin_set; ++m)
+	    {
+	      if( indexes_win[m].first != numeric_limits<size_t>::max() ){
+		
+		// using the constructor to copy chisq_obs; probably the same as using equals, but I wasn't 100% sure
+		//used to reset the sorting that occurs
+		//cerr << "nmarkers win = " << nmarkers_win[m]<< '\n';
+		vector<double> chisq_win( chisq_obs ) ;
+		vector<string> markers_win ( markers_0 ) ;
+		vector<short> keep ( nmarkers_win[m], 1 );
+		keep_markers_win[m] = keep;
+		snp_pair AB;
+		double LD_AB;
+		size_t a = 0;
+		
+		for (size_t q = indexes_win[m].first; q < indexes_win[m].first + nmarkers_win[m]-1;++q,++a)
+		  {
+		    size_t b = a + 1;
+		    for (size_t qq = q + 1; qq < indexes_win[m].first + nmarkers_win[m]; ++qq,++b)
+		      {
+			if (keep_markers_win[m][b])
+			  {
+			    snp_pair AB = make_pair(markers_0[q],markers_0[qq]);
+			    LD_AB = myld[AB];
+			    if (LD_AB >O.LDcutoff)
+			      {
+				
+				keep_markers_win[m][b] = 0;
+				//cerr << "chisq "<< qq <<" before= "<< chisq_win[qq]<< '\n';
+				chisq_win[qq] = chisq_win[qq]*0;
+				//cerr << "chisq "<< qq << " after= "<<chisq_win[qq]<<'\n';
+			      }
+			  }
+					
+		      }		    
+		  }
+		
+		sort( chisq_win.begin() + indexes_win[m].first, 
+		      chisq_win.begin() + indexes_win[m].second,
+		      boost::bind(greater<double>(),_1,_2)
+		      );
+		
+		double ESM_obs = 0;
+		size_t n;    
+		for ( size_t q = indexes_win[m].first; q < indexes_win[m].first + min(markers_used, nmarkers_win[m]); ++q )
+		  {
+		    
+		    n  = q - indexes_win[m].first + 1;
+		    //critical that the denominator be nmarkers in the window NOT markers_used
+		    ESM_obs += chisq_win[q] + log10((double) n / (double) nmarkers_win[m]);
 		      
-		      n  = q - indexes_win[m].first + 1;
-		      
-		      ESM_obs += chisq_win[q] + log10((double) n / (double) nmarkers_win[m]);
-		      
-		    }
-		  //cerr << " begin = " << indexes_win[m].first << " end = " << indexes_win[m].second << " ESM_obs = " << ESM_obs<< '\n'; 
-		  ESM_obs_win[m] = ESM_obs;
-		  for ( size_t w = 0 ; w < nperms_tot; ++w )
-		    {
-		      for ( size_t z = 0; z < nmarkers_win[m]; ++z )
-			{ 
-			  //each element in data is a vector of p values collated by marker then perm
-			  //THIS is where the problem is; you are moving forward by too much, you need to caluclate the number of markers
-			  //that you skip during the jump.
-			  data[m].push_back(newdata[w*nmarkers_set + indexes_win[m].first - indexes_set.first + z]) ;
-			}
-		    }
-		}
-	      }
-	      
-	    //ESTABLISH THREADS
-	    vector<thread> t ( nwin_set );
-	    
-	    
-	    for ( unsigned h = 0 ; h < t.size(); ++h)
-	      {
-		if( indexes_win[h].first != numeric_limits<size_t>::max() ){
-		  t[h] = thread(calc_esm, &data[h],ESM_obs_win[h],nperms_tot,nmarkers_win[h],markers_used,&ESMP_win[h]);
-		}
-	      }
-	    
-	    for ( unsigned h = 0 ; h < t.size(); ++h)
-	      {				
-		if( indexes_win[h].first != numeric_limits<size_t>::max() ){
-		  t[h].join();
-		}
-	      }
-	    for ( size_t h = 0 ; h < ESMP_win.size(); ++h)
-	      { 
-		if ( indexes_win[h].first != numeric_limits<size_t>::max()){
-		    midpoints.push_back(loci_mid[h]);
-		    p_values.push_back(ESMP_win[h]);
+		  }
+		
+		ESM_obs_win[m] = ESM_obs;
+		for ( size_t w = 0 ; w < nperms_tot; ++w )
+		  {
+		    for ( size_t z = 0; z < nmarkers_win[m]; ++z )
+		      { 
+			//each element in data is a vector of p values collated by marker then perm
+			//THIS is where the problem is; you are moving forward by too much, you need to caluclate the number of markers
+			//that you skip during the jump.
+			data[m].push_back(newdata[w*nmarkers_set + indexes_win[m].first - indexes_set.first + z]) ;
+		      }
 		  }
 	      }
-		
-	}
+	    }//end for m in nwin set
+	  
+	  //ESTABLISH THREADS
+	  vector<thread> t ( nwin_set );
+	  
+	  
+	  for ( unsigned h = 0 ; h < t.size(); ++h)
+	    {
+	      //throw the vector in data[h] to the function calc_esm(), with some params,and output to ESMP_win[h]
+	      if( indexes_win[h].first != numeric_limits<size_t>::max() ){
+		t[h] = thread(calc_esm, &data[h],ESM_obs_win[h],nperms_tot,nmarkers_win[h],markers_used,&ESMP_win[h],keep_markers_win[h]);
+	      }
+	    }
+	  
+	  for ( unsigned h = 0 ; h < t.size(); ++h)
+	    {
+	      //Join means come on back to main thread; will wait until all are done.
+	      if( indexes_win[h].first != numeric_limits<size_t>::max() ){
+		t[h].join();
+	      }
+	    }
+	  for ( size_t h = 0 ; h < ESMP_win.size(); ++h)
+	    { 
+	      if ( indexes_win[h].first != numeric_limits<size_t>::max()){
+		midpoints.push_back(loci_mid[h]);
+		p_values.push_back(ESMP_win[h]);
+	      }
+	    }
+	  
+	}//end if there are SNPs in the set
+      //jump forward to the next set of windows
       left += O.jumpsize*O.nwindows;
       right += O.jumpsize*O.nwindows;
       
-    }
-  //while(right <= LPOS);  //Possibly not a great way to terminate.  Look @ libseq for guidance
+    }//end do while loop
+ 
   
   ofstream output;
   output.open(O.outfile.c_str());
@@ -414,5 +474,5 @@ void run_test( const esm_options & O )
     { 
       output<<p_values[i]<<' '<<midpoints[i]<<'\n';//<<chroms_track[i]<<'\n';
     }
-   output.close();
+  output.close();
 }

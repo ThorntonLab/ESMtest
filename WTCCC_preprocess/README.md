@@ -1,3 +1,12 @@
+---
+output: pdf_document
+
+---
+```{r, include=FALSE}
+   # add this chunk to end of mycode.rmd
+   file.rename(from="WTCCC_Data.Rmd", 
+               to="README.md")
+```
 #WTCCC Data Conversion for GWAS/ESM Test
 
 WTCCC data came in two main types, the main genotype data and the supporting sample information file. In order to utilize these data in PLINK!, multiple preprocessing steps were taken. The goal being to convert the genotype/sample data into .ped/.map files which PLINK uses.
@@ -55,7 +64,7 @@ To cut the list of SNPS from the genotype files, use the bash script getsnps.sh,
 
 Make sure you change the line in SNPID.py where it references the affy annotation file:
 ```python
-RS_file = io.open('/Path/to/annotation/AFFT_RSID','r', encoding='utf-16-le')
+RS_file = io.open('/Path/to/annotation/AFFY_RSID','r', encoding='utf-16-le')
 ```
 
 Then run is as such:
@@ -80,8 +89,7 @@ This script will also output a file entitled Chrom#exclusion.txt, which will con
 <br>
 
 ##Exclusion lists
-In addition to the list of excluded SNP generated while making the .map, WTCCC has provided a list of SNPs for each disease which should be excluded for a variety of reasons. For each disease/chromosome combination the WTCCC and local exlusion lists should be concatenated to make a complete exclusion list
-
+In addition to the list of excluded SNP generated while making the .map, WTCCC has provided a list of SNPs for each disease which should be excluded for a variety of reasons. For each disease/chromosome combination the WTCCC and local exlusion lists should be concatenated to make a complete exclusion list. The WTCCC SNP exclusion lists need to processed to make sure all SNPs are properly identified by rsid. To do this, first you must run SNPID.py, as done with the total SNP list. Then you must run EXMerge.py, which is similiar to RSMerge.py in that it merges the SNP list with the newest dbSNP release.
 <br.
 
 ##Making the .ped file
@@ -99,7 +107,8 @@ We do not use any of the data except Indiv, Pheno and Genotypes, thus all other 
 To make the .ped, you will need the WTCCC genotype files, the WTCCC sample files, and the Affymetrix 500k annotation. The genotype and annotation files are explained above, they are not used in any different manner here. I will explain the use of the sample file.
 
 ###Sample Files:
-The sample files contain information on the individuals in the panel. In priciple, we dont use any of this data and these files are primarily used as an easy list of individuals for indexing. The first column of the sample file is the indvidual ID number (WTCCC #).
+
+The sample files contain information on the individuals in the panel. These sample files need to be screened agains the WTCCC Individual exclusion lists. A final filtered sample file for each disease should be used make the .ped file
 
 ###Run the script to make the .ped
 Once you have the genotype and sample files located and the annotation file is properly made, you can use the python script WTCCCtoPed.py to create the .ped.
@@ -108,18 +117,38 @@ Once you have the genotype and sample files located and the annotation file is p
 python /path/to/WTCCCtoPED.py /path/to/Affx_20070205fs1_gt_$Disease_Chiamo_$Chrom#.txt.gz $Chrom# /path/to/sample.txt /path/to/AFFY_RSID.txt $Disease /path/to/$Disease$Chrom#.ped
 ```
 
+###Filtering and merging the .ped/.map for analysis
+Before moving forward, it is best to use PLINK! to filter each .ped file for MAF<0.01. This will prevent the few SNPs which are messed up in just one disease panel from making it through to your final analysis. This can be done with the --recode option in PLINK:
+
+```sh 
+
+module load plink/1.90a
+
+plink --file ${dis}${chrom}  --maf 0.01  --recode --out ${dis}${chrom}_filtered  
+```
+
+Then to merge your case and control map/ped files for an actual GWAS use the following command:
+
+```sh 
+
+module load plink/1.90a
+
+plink --file ${dis}${chrom}_filtered --merge CONT${chrom}_filtered.ped CONT${chrom}_filtered.map --recode --out CONT_${dis}_${chrom} 
+```
+
 
 ##Conversion to binary PLINK! format
-Now that the .ped/.map files have been made we chose to use PLINK's inherent binary file capability for the sake of computation. PLINK itself can perform this operation when given a set of .ped/.map. To do this, simply concatenate the case and control .ped/.map files into one .ped/.map. then run the following command
+Now that the .ped/.map files have been made we chose to use PLINK's inherent binary file capability for the sake of computation. PLINK itself can perform this operation when given a set of .ped/.map. This is a good time to filter the merged case control panel for genotyping rate and once again for MAF<0.01 
 
 ```sh
 
-module load plink/1.07
+module load plink/1.90a
 
-plink --file $CaseDisease_$Control_$chrom# --1 --compound-genotypes --map3 --hwe 0.01 --noweb 
+plink --file CONT_${dis}_${chrom} --exclude GW_exclude_snps_FINAL.txt --map3  --make-bed --out CONT_${dis}_${chrom}  --maf 0.01 --geno 0.01
+
 ```
 
-This command will creat a .bed/.bim file set which are the binary .ped/.map and a set of .fam/.nosex/.log which we will for the most part not be using.
+This command will create a .bed/.bim file set which are the binary .ped/.map and a set of .fam/.nosex/.log which we will for the most part not be using.
 
 
 

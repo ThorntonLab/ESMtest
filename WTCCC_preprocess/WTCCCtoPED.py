@@ -23,7 +23,8 @@ def main():
 
 
     ##############################################
-    status = {'1958BC':0,'NBS':0,'BD':1,'CAD':1,'HT':1,'IBD':1,'RA':1,'T1D':1,'T2D':1}
+    #1=control 2=case
+    status = {'1958BC':1,'NBS':1,'BD':2,'CAD':2,'HT':2,'IBD':2,'RA':2,'T1D':2,'T2D':2}
     case_control = status[sys.argv[5]]
   
     #READ stuff in
@@ -36,12 +37,12 @@ def main():
 
     ##############################################
     #Make a list of data types for the genotype data
-    #Genotype data will all be two characters -> 'a2'
-    a = np.zeros((1,len(SNPS)),dtype='a2')
-    a[:]='a2'
+    #Genotype data will all be three characters -> 'a3'
+    a = np.zeros((1,len(SNPS)),dtype='a3')
+    a[:]='a3'
 
     #Types for SNP columns is a list of tuples:
-    #(SNP_ID,'a2')
+    #(SNP_ID,'a3')
     typ =zip(SNPS,a[0])
 
     #Types of standard columns in .PED:
@@ -49,7 +50,7 @@ def main():
     dash = [i for i,v in enumerate(typ) if v[0]=='---']
     counter = 0
     for i in dash:
-        typ[i]=('rsbad'+str(counter),'a2')
+        typ[i]=('rsbad'+str(counter),'a3')
         counter = counter +1
 
     #Make the array to be filled with data
@@ -64,8 +65,10 @@ def main():
     #Assign the column 'pheno' to the case_control status:
     dat['pheno']=case_control
     
+    #assign all sex to female since we are not using sex at all
+    dat['sex']=1
     #All other columns are currently not in need of being assigned 
-    #because we are not really using fam, pat, mat, or sex
+
     
 
     ##############################################
@@ -87,11 +90,11 @@ def main():
                     continue 
                 else:
                 #Then use the dictionary:
-                    dat[IDict[x[0]]][INDict[x[1]]]=x[2]     
+                    dat[IDict[x[0]]][INDict[x[1]]]=x[2][0]+' '+x[2][1]     
                 
             else:
                 #Just use the given ID
-                dat[x[0]][INDict[x[1]]]=x[2]
+                dat[x[0]][INDict[x[1]]]=x[2][0]+' '+x[2][1]
 
     in_file.close()
     ##############################################
@@ -100,7 +103,7 @@ def main():
     for i in range( len(dat) ):
         for j in range( len(dat[i]) ):
             if dat[i][j] == '':
-                dat[i][j]='00'
+                dat[i][j]='0 0'
 
     outfile = open(sys.argv[6], 'w')
     np.savetxt(outfile,dat,delimiter=' ', fmt="%s")
