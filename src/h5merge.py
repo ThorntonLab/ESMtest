@@ -3,6 +3,8 @@ import argparse
 import h5py
 import numpy as np
 
+#merge
+
 parser = argparse.ArgumentParser(description='merge hdf5 files from perms2h5; this is NOT a general utility for merging h5 files')
 
 parser.add_argument("-i","--in-files",type=str,nargs='*',help="Which files are to be merged")
