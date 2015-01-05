@@ -1,4 +1,5 @@
 #include <H5util.hpp>
+#include <ESMH5type.hpp>
 #include <cstdlib>
 
 using namespace std;
@@ -72,7 +73,7 @@ vector<int> read_ints( const char * filename, const char * dsetname )
   */
 }
 
-vector<double> read_doubles( const char * filename, const char * dsetname )
+vector<ESMBASE> read_doubles( const char * filename, const char * dsetname )
 {
   H5File ifile( filename, H5F_ACC_RDONLY );
   DataSet ds( ifile.openDataSet(dsetname) );
@@ -80,13 +81,13 @@ vector<double> read_doubles( const char * filename, const char * dsetname )
   int rank_j = dsp.getSimpleExtentNdims();
   hsize_t dims_out[rank_j];
   int ndims = dsp.getSimpleExtentDims( dims_out, NULL);
-  vector<double> receiver(dims_out[0]); //allocate memory to receive
+  vector<ESMBASE> receiver(dims_out[0]); //allocate memory to receive
   IntType intype = ds.getIntType();
   ds.read( &receiver[0], intype );
   return receiver;
 }
 
-vector<double> read_doubles_slab( const char * filename, 
+vector<ESMBASE> read_doubles_slab( const char * filename, 
 				  const char * dsetname,
 				  const size_t & start,
 				  const size_t & len)
@@ -130,7 +131,7 @@ vector<double> read_doubles_slab( const char * filename,
   memspace.selectHyperslab( H5S_SELECT_SET, count_out, offset_out );
   
 
-  vector<double> receiver(dims_out[0]*len); //allocate memory to receive
+  vector<ESMBASE> receiver(dims_out[0]*len); //allocate memory to receive
   IntType intype = ds.getIntType();
   ds.read( &receiver[0], intype, memspace, dsp);
   return receiver;
@@ -187,7 +188,7 @@ void write_ints ( const vector<int> & data ,
   dset.write(data.data(), PredType::NATIVE_INT );
 }
 
-void write_doubles ( const vector<double> & data ,
+void write_doubles ( const vector<ESMBASE> & data ,
 		     const char * dsetname,
 		     H5File ofile )
 {
@@ -201,9 +202,9 @@ void write_doubles ( const vector<double> & data ,
   DataSpace dataspace(1,chunk_dims, maxdims);
   
   DataSet dset = ofile.createDataSet(dsetname,
-				     PredType::NATIVE_DOUBLE,
+				     PredType::NATIVE_FLOAT,
 				     dataspace,
 				     cparms);
   
-  dset.write(data.data(), PredType::NATIVE_DOUBLE );
+  dset.write(data.data(), PredType::NATIVE_FLOAT );
 }

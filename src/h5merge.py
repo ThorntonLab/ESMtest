@@ -29,7 +29,7 @@ for name in inF:
             total_dim = [a for a in single_dim]
             total_dim[0]=total_dim[0]*total_in
             total_dim = tuple(total_dim)
-            outF[name].create_dataset(grp,total_dim,dtype=inF[name+'/'+grp].dtype,chunks=(10,total_dim[1]),compression="gzip",compression_opts=9)
+            outF[name].create_dataset(grp,total_dim,dtype=inF[name+'/'+grp].dtype,chunks=inF[name+'/'+grp].chunks,compression="gzip",compression_opts=9)
         else:
             outF[name].create_dataset(grp,single_dim,dtype=inF[name+'/'+grp].dtype,data=inF[name+'/'+grp].value,chunks=single_dim,compression="gzip",compression_opts=9)
 

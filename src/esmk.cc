@@ -1,4 +1,4 @@
- //HPC modules needed: hdf5/1.8.11 boost/1.54.0 zlib/1.2.7
+//HPC modules needed: hdf5/1.8.11 boost/1.54.0 zlib/1.2.7
 /*
 TODO:
 1)determine a method to deal with multiple chromosomes
@@ -6,13 +6,13 @@ TODO:
 3)test effect of window size, jump size and number of markers
 4)deal with LD
  */
+
 /*
   libhdf5 -- the C++ interface is in this header.
 
   This also exposes the C interface.
 */
 #include <H5Cpp.h>
-
 //Command line parsing using boost (C++)
 #include <boost/program_options.hpp>
 
@@ -42,6 +42,7 @@ TODO:
   to read in 1-dimensional data from H5 files
 */
 #include <H5util.hpp>
+#include <ESMH5type.hpp>
 
 using namespace std;
 using namespace boost::program_options;
@@ -52,7 +53,7 @@ struct esm_options
 {
   string outfile;
   int winsize,jumpsize,K,nwindows;
-  double LDcutoff;
+  ESMBASE LDcutoff;
   vector<string> infiles;
 };
 
@@ -91,12 +92,12 @@ esm_options parseargs( int argc, char ** argv );
 bool permfilesOK( const esm_options & O );
 //Runs the esm_k test on the data
 
-void calc_esm( const vector<double> * data,
-	       const double & ESM_obs,
+void calc_esm( const vector<ESMBASE> * data,
+	       const ESMBASE & ESM_obs,
 	       const size_t & nperms,
 	       const int & nmarkers,
 	       const int & K,
-	       double * ESMP_win,
+	       ESMBASE * ESMP_win,
 	       const vector<short> & keep_markers_win);
 
 void run_test( const esm_options & O );
@@ -126,7 +127,7 @@ esm_options parseargs( int argc, char ** argv )
     ("jumpsize,j",value<int>(&rv.jumpsize),"Window jump size (bp)")
     ("K,k",value<int>(&rv.K),"Number of markers to use for ESM_k stat in a window.  Must be > 0.")
     ("nwindows,n",value<int> (&rv.nwindows),"Number of windows to bring in at a time")
-    ("LDcutoff,r",value<double> (&rv.LDcutoff), "The R^2 cutoff for LD between SNPs")
+    ("LDcutoff,r",value<ESMBASE> (&rv.LDcutoff), "The R^2 cutoff for LD between SNPs")
     ;
 
   variables_map vm;
@@ -167,6 +168,7 @@ esm_options parseargs( int argc, char ** argv )
 bool permfilesOK( const esm_options & O )
 {
   if( O.infiles.empty() ) { return false; }
+ 
 
   vector<string> chroms_0 = read_strings(O.infiles[0].c_str(),"/Markers/chr");
   set<string> sc_0(chroms_0.begin(),chroms_0.end());
@@ -190,7 +192,7 @@ bool permfilesOK( const esm_options & O )
 	  return false;
 	}  
     }
-
+ 
   return true;
 }
 
@@ -212,25 +214,25 @@ pair<size_t,size_t> get_indexes( const vector<int> & pos,
   return make_pair( ci1-pos.begin(), pos.rend()-ci2-1 );
 }
 
-void calc_esm( const vector<double> * data,
-	       const double & ESM_obs,
+void calc_esm( const vector<ESMBASE> * data,
+	       const ESMBASE & ESM_obs,
 	       const size_t & nperms,
 	       const int & nmarkers,
 	       const int & K,
-	       double * ESMP_win,
+	       ESMBASE * ESMP_win,
 	       const vector<short> & keep_markers_win)
 {
 	      //for each perm in the data
-  vector<double> ESM_perm ( nperms );
+  vector<ESMBASE> ESM_perm ( nperms );
   for ( size_t j = 0; j< nperms; ++j)
     {
 		  //sort the markers for this range ( this sorts in ascending order)
       /* sort( *data.begin()+ nmarkers*j,
 	    *data.begin() + nmarkers*j + nmarkers,
-	    boost::bind(greater<double>(),_1,_2)
+	    boost::bind(greater<ESMBASE>(),_1,_2)
 	    );*/
 
-      double ESM = 0;
+      ESMBASE ESM = 0;
       /*calculate the ESM
 	Which is:
 		    
@@ -241,22 +243,22 @@ void calc_esm( const vector<double> * data,
       */  
 	     	   
       // need to go from 0 to min(markers_used, nmarkers)
-      vector<double> temp;
+      vector<ESMBASE> temp;
       for ( int k =0 ; k < nmarkers ; ++k)
 	{
 	  temp.push_back((*data)[nmarkers*j + k]*keep_markers_win[k]);
 	}
-      sort( temp.begin(),temp.end(),boost::bind(greater<double>(),_1,_2));
+      sort( temp.begin(),temp.end(),boost::bind(greater<ESMBASE>(),_1,_2));
       for ( int k =0 ; k < min(K,nmarkers) ; ++k )
 	{
-	  // ESM += *data[nmarkers*j + k] + log10(((double) k + 1) / (double) nmarkers); 
-	  ESM += temp[k] + log10(((double) k + 1) / (double) nmarkers);
+	  // ESM += *data[nmarkers*j + k] + log10(((ESMBASE) k + 1) / (ESMBASE) nmarkers); 
+	  ESM += temp[k] + log10(((ESMBASE) k + 1) / (ESMBASE) nmarkers);
 	}
 		  //j = 0:n_perms -1, i = 0:nfiles-1
       ESM_perm[j] = ESM;
       
     } 
-    double PVAL_win = 0 ;
+    ESMBASE PVAL_win = 0 ;
     for ( size_t i = 0; i < ESM_perm.size(); ++i)//for each perm
     {
       if (ESM_perm[i]>=ESM_obs)//if the ESM is larger than observed
@@ -264,8 +266,9 @@ void calc_esm( const vector<double> * data,
 	  PVAL_win += 1 ;
 	}
     }
-    PVAL_win /= (double)ESM_perm.size();//divide by number of perms
+    PVAL_win /= (ESMBASE)ESM_perm.size();//divide by number of perms
     *ESMP_win = PVAL_win;
+
 }
 
 				 
@@ -273,26 +276,32 @@ void run_test( const esm_options & O )
 {
   //Step 1: read in the marker data from the first file in 0.infiles:
   //1a: the chrom labels
+  
   vector<string> chroms_0 = read_strings(O.infiles[0].c_str(),"/Markers/chr");
+  
   set<string> sc_0(chroms_0.begin(),chroms_0.end());
   chroms_0.clear();
   //1b: the rsID for the markers
+  
   vector<string> markers_0 = read_strings(O.infiles[0].c_str(),"/Markers/IDs");
   
   //get the observed chisqs:
-  vector<double> chisq_obs = read_doubles(O.infiles[0].c_str(),"/Perms/observed");
+
+  vector<ESMBASE> chisq_obs = read_doubles(O.infiles[0].c_str(),"/Perms/observed");
   
   //1c: the marker positions
+
   vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
   
   //get the LD lists:
+
   vector<string>snpA = read_strings(O.infiles[0].c_str(),"/LD/snpA");
   vector<string>snpB = read_strings(O.infiles[0].c_str(),"/LD/snpB");
-  vector<double>rsq = read_doubles(O.infiles[0].c_str(),"/LD/rsq");
+  vector<ESMBASE>rsq = read_doubles(O.infiles[0].c_str(),"/LD/rsq");
   
   //LD map takes a pair of snps and returns an R squared value
   typedef pair<string, string> snp_pair;
-  typedef map<snp_pair, double> LDMap;
+  typedef map<snp_pair, ESMBASE> LDMap;
 
   LDMap myld;
   snp_pair snps;
@@ -312,10 +321,10 @@ void run_test( const esm_options & O )
    const int LPOS = *(pos_0.end()-1); //This is the last position in pos_0.  Equivalent to pos[pos.size()-1], but I guess I like to complicate things.
   
   //declare vectors for the final PVALUES, the midpoint of associated window and chromosome(dumbway):
-  vector<double> p_values;
-  vector<double> midpoints;
+  vector<ESMBASE> p_values;
+  vector<ESMBASE> midpoints;
 
-  // vector<double> chrom_track;
+  // vector<ESMBASE> chrom_track;
   //While there is at least one valid window in the set
   while( (LPOS - left)>= O.winsize )
     {
@@ -341,17 +350,18 @@ void run_test( const esm_options & O )
 	      loci_mid.push_back( (derech + izqui)/2 );
 	    }
 
-	  vector<double> ESMP_win ( nwin_set ) ;
-	  vector<double> ESM_obs_win ( nwin_set );
-	  vector<double> newdata  ;   
+	  vector<ESMBASE> ESMP_win ( nwin_set ) ;
+	  vector<ESMBASE> ESM_obs_win ( nwin_set );
+	  vector<ESMBASE> newdata  ;   
 	  size_t markers_used = O.K;
 
       	 	 
 	  for( size_t i = 0 ; i < O.infiles.size() ; ++i ) 
 	    {
-	      
+	      // cerr << "reading perms"<<'\n';
 	      //Get a the slab in vector form from the file
-	      vector<double> fresh = read_doubles_slab(O.infiles[i].c_str(),"/Perms/permutations",indexes_set.first, nmarkers_set) ;
+	      vector<ESMBASE> fresh = read_doubles_slab(O.infiles[i].c_str(),"/Perms/permutations",indexes_set.first, nmarkers_set) ;
+	      //cerr <<fresh.size()<<'\n';
 	      for ( size_t b = 0; b< fresh.size(); ++b)
 		{
 		  newdata.push_back(fresh[b]);
@@ -363,7 +373,7 @@ void run_test( const esm_options & O )
 	  //prepare the vector of esm values  for the new values from the file
 	  //we have one ESM value for each perm
 	  //vector of vectors to contain data for all perms in each window
-	  vector< vector<double> > data ( nwin_set );
+	  vector< vector<ESMBASE> > data ( nwin_set );
 	  vector< vector<short> > keep_markers_win ( nwin_set );
 	  for ( int m = 0 ; m < nwin_set; ++m)
 	    {
@@ -372,12 +382,12 @@ void run_test( const esm_options & O )
 		// using the constructor to copy chisq_obs; probably the same as using equals, but I wasn't 100% sure
 		//used to reset the sorting that occurs
 		//cerr << "nmarkers win = " << nmarkers_win[m]<< '\n';
-		vector<double> chisq_win( chisq_obs ) ;
+		vector<ESMBASE> chisq_win( chisq_obs ) ;
 		vector<string> markers_win ( markers_0 ) ;
 		vector<short> keep ( nmarkers_win[m], 1 );
 		keep_markers_win[m] = keep;
 		snp_pair AB;
-		double LD_AB;
+		ESMBASE LD_AB;
 		size_t a = 0;
 		
 		for (size_t q = indexes_win[m].first; q < indexes_win[m].first + nmarkers_win[m]-1;++q,++a)
@@ -404,17 +414,17 @@ void run_test( const esm_options & O )
 		
 		sort( chisq_win.begin() + indexes_win[m].first, 
 		      chisq_win.begin() + indexes_win[m].second,
-		      boost::bind(greater<double>(),_1,_2)
+		      boost::bind(greater<ESMBASE>(),_1,_2)
 		      );
 		
-		double ESM_obs = 0;
+		ESMBASE ESM_obs = 0;
 		size_t n;    
 		for ( size_t q = indexes_win[m].first; q < indexes_win[m].first + min(markers_used, nmarkers_win[m]); ++q )
 		  {
 		    
 		    n  = q - indexes_win[m].first + 1;
 		    //critical that the denominator be nmarkers in the window NOT markers_used
-		    ESM_obs += chisq_win[q] + log10((double) n / (double) nmarkers_win[m]);
+		    ESM_obs += chisq_win[q] + log10((ESMBASE) n / (ESMBASE) nmarkers_win[m]);
 		      
 		  }
 		

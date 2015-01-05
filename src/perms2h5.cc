@@ -5,8 +5,8 @@
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <H5Cpp.h>
-
+#include "/data/apps/hdf5/1.8.11/include/H5Cpp.h"
+#include <ESMH5type.hpp>
 
 //Headers to conver chi-squared statistic into chi-squared p-value.  GNU Scientific Library (C language)
 #include <gsl/gsl_cdf.h>
@@ -216,14 +216,14 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	cerr << "Starting to process perms for "
 	     << nmarkers << " markers\n";
       }
-    //vector< double > data(10*nmarkers);
-    // double ** data = new double *[O.nrecords];
+    //vector< ESMBASE > data(10*nmarkers);
+    // ESMBASE ** data = new ESMBASE *[O.nrecords];
     // for( size_t i = 0 ; i < O.nrecords ; ++i )
     //   {
-    // 	data[i] = new double[nmarkers];
+    // 	data[i] = new ESMBASE[nmarkers];
     //   }
-    //double * data = new double(O.nrecords*nmarkers);
-    vector<double> data(O.nrecords*nmarkers);
+    //ESMBASE * data = new ESMBASE(O.nrecords*nmarkers);
+    vector<ESMBASE> data(O.nrecords*nmarkers);
     int repno;
     fscanf(ifp,"%d",&repno);
 
@@ -231,7 +231,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     //The first line is the observed data
     for( size_t i = 0 ; i < nmarkers ; ++i )
       {
-	int rv = fscanf(ifp,"%lf",&data[i]);
+	int rv = fscanf(ifp,"%f",&data[i]);
 	if(O.convert)
 	  {
 	    data[i] = (data[i]!=1.) ? -log10(gsl_cdf_chisq_Q(data[i],1.)) : 0.;
@@ -249,34 +249,36 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     hsize_t maxdims[1] = {nmarkers};
     
     cparms.setChunk( 1, chunk_dims );
+    cparms.setShuffle();//try this for better compression permformance
     cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
 
   
     DataSpace * dataspace = new DataSpace(1,chunk_dims, maxdims);
 
     DataSet * d = new DataSet(ofile.createDataSet("/Perms/observed",
-						  PredType::NATIVE_DOUBLE,
+						  PredType::NATIVE_FLOAT,
 						  *dataspace,
 						  cparms));
 
-    d->write( data.data(), PredType::NATIVE_DOUBLE );
+    d->write( data.data(), PredType::NATIVE_FLOAT );
 
     delete dataspace;
     delete d;
 
     //ok, now we write a big matrix of the permuted values
-    hsize_t chunk_dims2[2] = {10, nmarkers};
+    hsize_t chunk_dims2[2] = {O.nrecords,50};//{10, nmarkers};
     hsize_t maxdims2[2] = {H5S_UNLIMITED,nmarkers};
     hsize_t datadims[2] = {0,nmarkers};
     hsize_t offsetdims[2] = {0,0};
     hsize_t recorddims[2] = {O.nrecords,nmarkers};
     cparms.setChunk( 2, chunk_dims2 );
-    cparms.setDeflate( 6 );
+    // cparms.setShuffle(); //this is redundant because cparms is set globally
+    ///cparms.setDeflate( 6 );
 
     //dataspace = new DataSpace(2, recorddims, maxdims2);
     DataSpace fspace(2,datadims,maxdims2);
     d = new DataSet(ofile.createDataSet("/Perms/permutations",
-					PredType::NATIVE_DOUBLE,
+					PredType::NATIVE_FLOAT,
 					fspace,
 					cparms));
 
@@ -304,12 +306,12 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	    for( size_t j = 0 ; j < nmarkers ; ++j,++I )
 	      {
 		if(O.verbose) cerr << j << ',' << I << ' ';
-		rv = fscanf(ifp,"%lf",&data[I]);
+		rv = fscanf(ifp,"%f",&data[I]);
 		// if( rv == 0 || !feof(ifp) )
 		//   {
 		//     if( O.verbose ) cerr << "converting " << repno << ':' << j << ',' << I << "to nan\n";
 		//     //rv = chew2ws(ifp);
-		//     data[I] = numeric_limits<double>::quiet_NaN();
+		//     data[I] = numeric_limits<ESMBASE>::quiet_NaN();
 		//   }
 		// if ( rv == -1 )
 		// //		if(rv==0||rv==-1)
@@ -331,7 +333,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	d->extend( datadims );
 	DataSpace * dspace = new DataSpace( d->getSpace() );
 	dspace->selectHyperslab(H5S_SELECT_SET,recorddims,offsetdims);
-	d->write(data.data(), PredType::NATIVE_DOUBLE,memspace,*dspace);
+	d->write(data.data(), PredType::NATIVE_FLOAT,memspace,*dspace);
 	delete dspace;
 	offsetdims[0] += O.nrecords;
       }
@@ -343,8 +345,8 @@ void process_ldfile( const options & O, H5File & ofile )
   ifstream ldf (O.ldfile.c_str());
   string line;
   vector<string> lineVector, snpA, snpB;
-  vector<double> rsq;
-  double r2;
+  vector<ESMBASE> rsq;
+  ESMBASE r2;
   string::size_type sz;
   if (ldf.is_open())
     {
@@ -391,16 +393,16 @@ void process_ldfile( const options & O, H5File & ofile )
 					    cparms);
 
   snpB_dset.write(snpB.data(), datatype );
-  /*for (vector<double>::const_iterator i = rsq.begin();i!=rsq.end();++i)
+  /*for (vector<ESMBASE>::const_iterator i = rsq.begin();i!=rsq.end();++i)
     {
       cerr << *i<< ' ';
       }*/
   DataSet rsq_dset = ofile.createDataSet("/LD/rsq",
-					 H5::PredType::NATIVE_DOUBLE,
+					 H5::PredType::NATIVE_FLOAT,
 					 dataspace,
 					 cparms);
 
 
-  rsq_dset.write( rsq.data(),H5::PredType::NATIVE_DOUBLE );
+  rsq_dset.write( rsq.data(),H5::PredType::NATIVE_FLOAT );
 
 }
