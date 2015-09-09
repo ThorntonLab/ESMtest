@@ -88,17 +88,29 @@ vector<ESMBASE> read_doubles( const char * filename, const char * dsetname )
 }
 
 vector<ESMBASE> read_doubles_slab( const char * filename, 
-				  const char * dsetname,
-				  const size_t & start,
-				  const size_t & len)
+				   const char * dsetname,
+				   const size_t & start,
+				   const size_t & len,
+				   const size_t & cmarkers,
+				   const size_t & cperms,
+				   const size_t & nperms)
 {
-  H5File ifile( filename, H5F_ACC_RDONLY );
+  size_t nchunks = (nperms/cperms)*(len/cmarkers + 1);
+  size_t ccache = nchunks*cperms*cmarkers*4;
+  size_t rdcc = 10*nchunks;
+  firstprime(rdcc);
+  FileAccPropList fapl;
+  fapl.setCache(23,rdcc,ccache,0); 
+  /*NOTE:
+    1)not sure how metadata cache works
+    2)2089 = prime> 10*NCHUNKS/SLAB, assumes 2 million persm with 10K chunks and approx 1 CHUNK per window 
+   */
+  H5File ifile( filename, H5F_ACC_RDONLY,H5P_DEFAULT,fapl );
   DataSet ds( ifile.openDataSet(dsetname) );
   DataSpace dsp(ds.getSpace());
   int rank_j = dsp.getSimpleExtentNdims();
   hsize_t dims_out[rank_j];
-  int ndims = dsp.getSimpleExtentDims( dims_out, NULL);
-  
+  int ndims = dsp.getSimpleExtentDims( dims_out, NULL);  
   //*Define the hyperslab in the dataset; see readdata.cpp in 
   // the HDF5 group c++ API
   hsize_t offset[2];
@@ -208,3 +220,31 @@ void write_doubles ( const vector<ESMBASE> & data ,
   
   dset.write(data.data(), PredType::NATIVE_FLOAT );
 }
+
+void firstprime (size_t & num)
+{
+  size_t count = 0;
+  bool prime = false;
+  while ( prime == false )
+    {
+      count = 0;
+
+      for (size_t i=2;i<num;i++)
+        {
+
+          if (num%i==0)
+            {
+              count++;
+            }
+        }
+      if ( count == 0 )
+        {
+          prime = true;
+        }
+      else
+        {
+          num++;
+	}
+    }
+}
+

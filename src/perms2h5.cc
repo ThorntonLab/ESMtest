@@ -31,20 +31,25 @@ struct options
   This object represents the command-line options
  */
 {
-  bool strip,convert,verbose;
+  bool strip,convert,verbose,compression,dbprec,nochunk;
   string bimfile,ldfile,infile,outfile;
-  size_t nrecords;
+  size_t nrecords,ccache,cmarkers;
   options(void);
 };
 
 options::options(void) : strip(true),
 			 convert(true),
 			 verbose(false),
+			 compression(false),
+			 dbprec(false),
+			 nochunk(false),
 			 bimfile(string()),
 			 ldfile(string()),
 			 infile(string()),
 			 outfile(string()),
-			 nrecords(1)
+			 nrecords(1),
+			 ccache(5),
+			 cmarkers(50)
 {
 }
 
@@ -52,13 +57,37 @@ options process_argv( int argc, char ** argv );
 size_t process_bimfile( const options & O, H5File & ofile );
 void process_ldfile( const options & O, H5File & ofile );
 void process_perms( const options & O, size_t nmarkers, H5File & ofile );
-
+void firstprime ( size_t & num );
 int main( int argc, char ** argv )
 {
   options O = process_argv( argc, argv );
-  // cerr << O.ldfile << '\n';
+  
   //Create output file
-  H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC );
+  size_t cache_bytes = O.ccache*1024*1024; //param in mb -> b
+  size_t chunk_dat = O.nrecords*O.cmarkers;//number of total entries in a chunk
+  size_t chunk_bytes = chunk_dat*4;  
+  if ( O.dbprec ) 
+    {
+      size_t chunk_bytes = chunk_dat*8;	
+    }
+  size_t nc_cache =  cache_bytes/chunk_bytes + 1 ; 
+  if ( nc_cache == 1 )
+    {
+      cerr << "Raw data cache size smaller than chunk size, either increase cache, decrease chunk size or disable chunking entirely" << '\n';
+      exit(0);
+    }
+  //find the first prime number which is bigger than 10*nc_cache
+  size_t rdcc = 10*nc_cache;
+
+  firstprime(rdcc);
+  // cerr<< "rdcc = " << rdcc << '\n';
+  FileAccPropList fapl;
+  fapl.setCache(23,rdcc,cache_bytes,0) ;
+  //Number of elements in meta data cache(small prime)
+  //Number of elements in the raw data chunk cache size (should be prime number 10-100 * NCHUNKS/cache)
+  //O.ccache command arg set to 5MB as default( H5 default = 1MB)
+  //Preemption policy set to no preemption
+  H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC,H5P_DEFAULT,fapl );
   size_t nmarkers = process_bimfile( O, ofile );
   process_perms( O, nmarkers, ofile );
   process_ldfile( O, ofile ); 
@@ -80,6 +109,11 @@ options process_argv( int argc, char ** argv )
     ("infile,i",value<string>(&rv.infile)->default_value(string()),"Input file name containing permutations.  Default is to read from stdin")
     ("outfile,o",value<string>(&rv.outfile)->default_value(string()),"Output file name.  Format is HDF5")
     ("nrecords,n",value<size_t>(&rv.nrecords)->default_value(1),"Number of records to buffer.")
+    ("ccache,a",value<size_t>(&rv.ccache)->default_value(5),"Raw data chunk cache in mega bytes(will be converted to bytes), default = 5MB")
+    ("cmarkers,m",value<size_t>(&rv.cmarkers)->default_value(50),"Number of markers in a chunk")
+    ("compression,c","Gzip level 6 + shuffle compression")
+    ("nochunk","Chunked storage, default is true, false=contiguous")
+    ("dbprec","ESM base type set to double")
     ("verbose,v","Write process info to STDERR")
     ;
 
@@ -121,6 +155,18 @@ options process_argv( int argc, char ** argv )
     {
       rv.verbose = true;
     }
+  if( vm.count("compression") )
+    {
+      rv.compression = true;
+    }
+  if (vm.count("nochunk"))
+    {
+      rv.nochunk = true;
+    }
+  if (vm.count("dbprec"))
+    {
+      rv.dbprec = true;
+    }
   return rv;
 }
 
@@ -151,7 +197,6 @@ size_t process_bimfile( const options & O, H5File & ofile )
       markers.push_back( marker );
       vpos.push_back( pos );
     }
-
   if ( O.verbose )
     {
       cerr << ".bim file contains " << markers.size() << " markers\n";
@@ -170,8 +215,11 @@ size_t process_bimfile( const options & O, H5File & ofile )
   hsize_t maxdims[1] = {markers.size()};
 
   cparms.setChunk( 1, chunk_dims );
-  cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
-  
+
+  if (O.compression )
+    {
+      cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
+    }
   DataSpace dataspace(1,chunk_dims, maxdims);
 
   H5::StrType datatype(H5::PredType::C_S1, H5T_VARIABLE); 
@@ -249,9 +297,11 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     hsize_t maxdims[1] = {nmarkers};
     
     cparms.setChunk( 1, chunk_dims );
-    cparms.setShuffle();//try this for better compression permformance
-    cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
-
+    if ( O.compression)
+      {
+	cparms.setShuffle();//try this for better compression permformance
+	cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
+      }
   
     DataSpace * dataspace = new DataSpace(1,chunk_dims, maxdims);
 
@@ -266,16 +316,14 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
     delete d;
 
     //ok, now we write a big matrix of the permuted values
-    hsize_t chunk_dims2[2] = {O.nrecords,50};//{10, nmarkers};
+    hsize_t chunk_dims2[2] = {O.nrecords,O.cmarkers};//{10, nmarkers};
     hsize_t maxdims2[2] = {H5S_UNLIMITED,nmarkers};
     hsize_t datadims[2] = {0,nmarkers};
     hsize_t offsetdims[2] = {0,0};
     hsize_t recorddims[2] = {O.nrecords,nmarkers};
-    cparms.setChunk( 2, chunk_dims2 );
-    // cparms.setShuffle(); //this is redundant because cparms is set globally
-    ///cparms.setDeflate( 6 );
 
-    //dataspace = new DataSpace(2, recorddims, maxdims2);
+    cparms.setChunk( 2, chunk_dims2 );
+
     DataSpace fspace(2,datadims,maxdims2);
     d = new DataSet(ofile.createDataSet("/Perms/permutations",
 					PredType::NATIVE_FLOAT,
@@ -405,4 +453,31 @@ void process_ldfile( const options & O, H5File & ofile )
 
   rsq_dset.write( rsq.data(),H5::PredType::NATIVE_FLOAT );
 
+}
+
+void firstprime (size_t & num)
+{
+  size_t count = 0;
+  bool prime = false;
+  while ( prime == false )
+    {
+      count = 0;
+
+      for (size_t i=2;i<num;i++)
+        {
+
+          if (num%i==0)
+            {
+              count++;
+            }
+        }
+      if ( count == 0 )
+        {
+          prime = true;
+        }
+      else
+        {
+          num++;
+        }
+    }
 }

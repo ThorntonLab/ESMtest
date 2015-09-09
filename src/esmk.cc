@@ -53,6 +53,7 @@ struct esm_options
 {
   string outfile;
   int winsize,jumpsize,K,nwindows;
+  size_t cmarkers,cperms,nperms;
   ESMBASE LDcutoff;
   vector<string> infiles;
 };
@@ -128,6 +129,9 @@ esm_options parseargs( int argc, char ** argv )
     ("K,k",value<int>(&rv.K),"Number of markers to use for ESM_k stat in a window.  Must be > 0.")
     ("nwindows,n",value<int> (&rv.nwindows),"Number of windows to bring in at a time")
     ("LDcutoff,r",value<ESMBASE> (&rv.LDcutoff), "The R^2 cutoff for LD between SNPs")
+    ("cmarkers,m",value<size_t>(&rv.cmarkers)->default_value(50),"Raw data chunk size in markers, default = 50")
+    ("cperms,c",value<size_t>(&rv.cperms)->default_value(10000),"Raw data chunk size in perms, default = 10000")
+    ("nperms,p",value<size_t>(&rv.nperms)->default_value(2000000),"Number of perms, default = 2000000")
     ;
 
   variables_map vm;
@@ -359,8 +363,9 @@ void run_test( const esm_options & O )
 	  for( size_t i = 0 ; i < O.infiles.size() ; ++i ) 
 	    {
 	      // cerr << "reading perms"<<'\n';
+	      //cerr << "start win mid = " << loci_mid[0] << '\n';
 	      //Get a the slab in vector form from the file
-	      vector<ESMBASE> fresh = read_doubles_slab(O.infiles[i].c_str(),"/Perms/permutations",indexes_set.first, nmarkers_set) ;
+	      vector<ESMBASE> fresh = read_doubles_slab(O.infiles[i].c_str(),"/Perms/permutations",indexes_set.first, nmarkers_set,O.cmarkers,O.cperms,O.nperms) ;
 	      //cerr <<fresh.size()<<'\n';
 	      for ( size_t b = 0; b< fresh.size(); ++b)
 		{
