@@ -28,6 +28,5 @@ plink --noweb --bfile fake --r2 --assoc mperm=50000 --mperm-save-all --map3 --ou
 rm -f fake.$SGE_TASK_ID.mperm.dump.all
 
 #Delete other needless output
-rm -f fake.$SGE_TASK_ID.log
 rm -f fake.$SGE_TASK_ID.assoc.mperm
-#rm -f fake.$SGE_TASK_ID.assoc
+#rm -f bigfake.$SGE_TASK_ID.assoc
