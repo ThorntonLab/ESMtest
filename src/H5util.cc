@@ -1,4 +1,5 @@
 #include <H5util.hpp>
+#include <ESMH5type.hpp>
 #include <cstdlib>
 
 using namespace std;
@@ -72,7 +73,7 @@ vector<int> read_ints( const char * filename, const char * dsetname )
   */
 }
 
-vector<double> read_doubles( const char * filename, const char * dsetname )
+vector<ESMBASE> read_doubles( const char * filename, const char * dsetname )
 {
   H5File ifile( filename, H5F_ACC_RDONLY );
   DataSet ds( ifile.openDataSet(dsetname) );
@@ -80,11 +81,74 @@ vector<double> read_doubles( const char * filename, const char * dsetname )
   int rank_j = dsp.getSimpleExtentNdims();
   hsize_t dims_out[rank_j];
   int ndims = dsp.getSimpleExtentDims( dims_out, NULL);
-  vector<double> receiver(dims_out[0]); //allocate memory to receive
+  vector<ESMBASE> receiver(dims_out[0]); //allocate memory to receive
   IntType intype = ds.getIntType();
   ds.read( &receiver[0], intype );
   return receiver;
 }
+
+vector<ESMBASE> read_doubles_slab( const char * filename, 
+				   const char * dsetname,
+				   const size_t & start,
+				   const size_t & len,
+				   const size_t & cmarkers,
+				   const size_t & cperms,
+				   const size_t & nperms)
+{
+  size_t nchunks = (nperms/cperms)*(len/cmarkers + 1);
+  size_t ccache = nchunks*cperms*cmarkers*4;
+  size_t rdcc = 10*nchunks;
+  firstprime(rdcc);
+  FileAccPropList fapl;
+  fapl.setCache(23,rdcc,ccache,0); 
+  /*NOTE:
+    1)not sure how metadata cache works
+    2)2089 = prime> 10*NCHUNKS/SLAB, assumes 2 million persm with 10K chunks and approx 1 CHUNK per window 
+   */
+  H5File ifile( filename, H5F_ACC_RDONLY,H5P_DEFAULT,fapl );
+  DataSet ds( ifile.openDataSet(dsetname) );
+  DataSpace dsp(ds.getSpace());
+  int rank_j = dsp.getSimpleExtentNdims();
+  hsize_t dims_out[rank_j];
+  int ndims = dsp.getSimpleExtentDims( dims_out, NULL);  
+  //*Define the hyperslab in the dataset; see readdata.cpp in 
+  // the HDF5 group c++ API
+  hsize_t offset[2];
+  hsize_t count[2];
+  offset[0]= 0;
+  offset[1]= start;
+  count[0] = dims_out[0];
+  count[1]= len;
+  //should select a hyperslab which ds.read can reference
+  dsp.selectHyperslab(H5S_SELECT_SET,count,offset);
+  
+  //define memspace
+
+  hsize_t dimsm[2];
+  dimsm[0]=dims_out[0];
+  dimsm[1]=len;
+  DataSpace memspace(2,dimsm);
+
+  //define hyperslab in memory...this is done so you can go from
+  //high dimensions to lower ones while still in H5
+
+  hsize_t offset_out[2]; //mem offset
+  hsize_t count_out[2]; //
+
+  offset_out[0] = 0;
+  offset_out[1] = 0;
+  count_out[0]  = dims_out[0];
+  count_out[1]  = len;
+  
+  memspace.selectHyperslab( H5S_SELECT_SET, count_out, offset_out );
+  
+
+  vector<ESMBASE> receiver(dims_out[0]*len); //allocate memory to receive
+  IntType intype = ds.getIntType();
+  ds.read( &receiver[0], intype, memspace, dsp);
+  return receiver;
+}
+
 
 void write_strings( const std::vector<string> & data,
 		    const char * dsetname,
@@ -136,7 +200,7 @@ void write_ints ( const vector<int> & data ,
   dset.write(data.data(), PredType::NATIVE_INT );
 }
 
-void write_doubles ( const vector<double> & data ,
+void write_doubles ( const vector<ESMBASE> & data ,
 		     const char * dsetname,
 		     H5File ofile )
 {
@@ -150,9 +214,37 @@ void write_doubles ( const vector<double> & data ,
   DataSpace dataspace(1,chunk_dims, maxdims);
   
   DataSet dset = ofile.createDataSet(dsetname,
-				     PredType::NATIVE_DOUBLE,
+				     PredType::NATIVE_FLOAT,
 				     dataspace,
 				     cparms);
   
-  dset.write(data.data(), PredType::NATIVE_DOUBLE );
+  dset.write(data.data(), PredType::NATIVE_FLOAT );
 }
+
+void firstprime (size_t & num)
+{
+  size_t count = 0;
+  bool prime = false;
+  while ( prime == false )
+    {
+      count = 0;
+
+      for (size_t i=2;i<num;i++)
+        {
+
+          if (num%i==0)
+            {
+              count++;
+            }
+        }
+      if ( count == 0 )
+        {
+          prime = true;
+        }
+      else
+        {
+          num++;
+	}
+    }
+}
+
