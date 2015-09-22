@@ -22,20 +22,20 @@ This will make the following files
 If you look in submit.sh, you will see each step. Let's go through
 them
 
-makedata.sh:
+###makedata.sh:
 	* ms simulates 1 locus with 500 SNPS for 6000 individuals with a
     recent severe bottleneck.
 	*ms2plink converst ms output to PLINK! format
 	*plink then converts to binary PLINK! format
 
-permute.sh:
+###permute.sh:
 	*Use a named pipe to handle permutation raw output from PLINK
 	*plink does single marker test on permuted datasets. Here we do
 	20,000 permutations in 2 sets
 	*perms2h5 converts permutation output to h5 format for later use
 	saving data in chunks of 50 markers by 10,000 perms
 
-esmk.sh:
+###esmk.sh:
 	*Takes the h5 permutation files and runs the test
 	*Window size = 10,000 BP,
 	*Jump size = 1000 BP
