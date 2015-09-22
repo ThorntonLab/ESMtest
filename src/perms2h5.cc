@@ -5,7 +5,7 @@
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "/data/apps/hdf5/1.8.11/include/H5Cpp.h"
+#include <H5Cpp.h>
 #include <ESMH5type.hpp>
 
 //Headers to conver chi-squared statistic into chi-squared p-value.  GNU Scientific Library (C language)

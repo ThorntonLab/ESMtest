@@ -7,9 +7,13 @@
 
 #
 #Modify as needed for your system                                                                                                                                 
-module load zlib/1.2.7
-module load boost/1.54.0
-module load hdf5/1.8.11
+module purge
+module load krthornt/thorntonlab/1.0
+#NEED:
+#zlib
+#boost
+#hdf5
+
 
 cd $SGE_O_WORKDIR
 
