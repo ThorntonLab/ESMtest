@@ -21,3 +21,10 @@ Please use your system's package installation tools to install the above wheneve
 If you need to compile from source and are generally uncomfortable doing so, you may use this [script](https://github.com/molpopgen/install_libseq), which also installs [libsequence](https://github.com/molpopgen/libsequence).  Please read carefully the README that comes with the script.
 
 ##Installing ESM
+
+
+git clone https://github.com/ThorntonLab/ESMtest.git ESMtest
+
+cd ESM/src
+./configure
+make

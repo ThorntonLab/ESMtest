@@ -10,10 +10,14 @@
 
 #$ -pe openmp 2
 #Modify as needed for your system
+module purge
+module load krthornt/thorntonlab/1.0
 module load plink/1.90a
-module load zlib/1.2.7
-module load boost/1.54.0
-module load hdf5/1.8.11
+#NEED:
+#zlib
+#boost
+#hdf5
+#plink
 
 cd $SGE_O_WORKDIR
 

@@ -6,9 +6,14 @@
 
 
 #Modify as needed for your GE system
-module load krthornt/libsequence/1.8.0
-module load zlib/1.2.7
+module purge
+module load krthornt/thorntonlab/1.0
 module load plink/1.90a
+#NEED:
+#zlib
+#boost
+#hdf5
+#plink
 
 SEED1=$RANDOM
 SEED2=$RANDOM
