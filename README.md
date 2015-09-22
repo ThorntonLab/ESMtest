@@ -37,7 +37,7 @@ If you want to install it in non-standard location (i.e your prefix if not /usr/
 
 **cd ESMtest**
 
-**./configure --prefix=$HOME (or wherever you want it to go**
+**./configure --prefix=$HOME (or wherever you want it to go)**
 
 **make**
 
