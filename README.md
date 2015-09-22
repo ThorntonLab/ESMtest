@@ -25,6 +25,14 @@ If you need to compile from source and are generally uncomfortable doing so, you
 
 git clone https://github.com/ThorntonLab/ESMtest.git ESMtest
 
-cd ESM/src
+cd ESMtest
 ./configure
 make
+make install
+
+If you want to install it in non-standard location (i.e your prefix if not /usr/local/) then:
+
+cd ESMtest
+./configure --prefix=$HOME (or wherever you want it to go
+make
+make install
