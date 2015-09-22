@@ -25,11 +25,11 @@ If you need to compile from source and are generally uncomfortable doing so, you
 
 **git clone https://github.com/ThorntonLab/ESMtest.git ESMtest**
 
-** cd ESMtest **
+**cd ESMtest**
 
-**./configure **
+**./configure**
 
-**make **
+**make**
 
 **make install**
 
