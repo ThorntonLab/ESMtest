@@ -1,22 +1,24 @@
 AC_PREREQ(2.63)
 AC_INIT([ESM],[0.1.0],[https://github.com/ThorntonLab/ESMtest])
 AM_INIT_AUTOMAKE
+AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile])
 
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_CXX
-AC_CONFIG_MACRO_DIR([m4])
 
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+
 AC_LANG(C++)
+
 AC_C_INLINE
 AC_FUNC_MALLOC
 AC_HEADER_STDBOOL
 AC_TYPE_SIZE_T
+
+AC_CONFIG_FILES([Makefile src/Makefile])
 
 AC_CHECK_HEADER(zlib.h,,[AC_MSG_ERROR([zlib.h not found.  zlib >= 1.2.5 is requred])])
 AC_CHECK_HEADER(H5Cpp.h,,[AC_MSG_ERROR([H5Cpp.h not found.  HDF5 >= 1.8.11 is requred])])
