@@ -1,6 +1,6 @@
 AC_PREREQ(2.63)
 AC_INIT([ESM],[0.1.0],[https://github.com/ThorntonLab/ESMtest])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_MACRO_DIR([m4])
