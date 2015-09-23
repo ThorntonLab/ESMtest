@@ -80,7 +80,7 @@ int main( int argc, char ** argv )
   size_t rdcc = 10*nc_cache;
 
   firstprime(rdcc);
-  // cerr<< "rdcc = " << rdcc << '\n';
+  
   FileAccPropList fapl;
   fapl.setCache(23,rdcc,cache_bytes,0) ;
   //Number of elements in meta data cache(small prime)
@@ -264,13 +264,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	cerr << "Starting to process perms for "
 	     << nmarkers << " markers\n";
       }
-    //vector< ESMBASE > data(10*nmarkers);
-    // ESMBASE ** data = new ESMBASE *[O.nrecords];
-    // for( size_t i = 0 ; i < O.nrecords ; ++i )
-    //   {
-    // 	data[i] = new ESMBASE[nmarkers];
-    //   }
-    //ESMBASE * data = new ESMBASE(O.nrecords*nmarkers);
+    
     vector<ESMBASE> data(O.nrecords*nmarkers);
     int repno;
     fscanf(ifp,"%d",&repno);
@@ -330,7 +324,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 					fspace,
 					cparms));
 
-    //DataSpace memspace(2,recorddims);
+    
     size_t RECSREAD = 0;
     while(!feof(ifp))
       {
@@ -350,24 +344,12 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	    	if( O.verbose ) cerr << "return 1\n";
 	    	return; //we have hit the end of the file
 	      }
-	    //for( size_t j = 0 ; j < nmarkers-1 ; ++j,++I )
+	    
 	    for( size_t j = 0 ; j < nmarkers ; ++j,++I )
 	      {
 		if(O.verbose) cerr << j << ',' << I << ' ';
 		rv = fscanf(ifp,"%f",&data[I]);
-		// if( rv == 0 || !feof(ifp) )
-		//   {
-		//     if( O.verbose ) cerr << "converting " << repno << ':' << j << ',' << I << "to nan\n";
-		//     //rv = chew2ws(ifp);
-		//     data[I] = numeric_limits<ESMBASE>::quiet_NaN();
-		//   }
-		// if ( rv == -1 )
-		// //		if(rv==0||rv==-1)
-		//   {
-		//     cerr << "Error, input stream ended before expected...\n";
-		//     ofile.close();
-		//     exit(10);
-		//   }
+	
 		if(O.convert)
 		  {
 		    data[I]= (data[I] != 1.) ? -log10(gsl_cdf_chisq_Q(data[I],1.)) : 0.;
@@ -375,7 +357,7 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 	      }
 	    if(O.verbose) cerr<< endl;
 	  }
-	datadims[0] += RECSREAD;//O.nrecords;
+	datadims[0] += RECSREAD;
 	recorddims[0] = RECSREAD;
 	DataSpace memspace(2,recorddims);
 	d->extend( datadims );
@@ -405,9 +387,7 @@ void process_ldfile( const options & O, H5File & ofile )
 	  snpA.push_back(lineVector.at(3));
 	  snpB.push_back(lineVector.at(6));
 	  r2 = ::atof( lineVector.at(7).c_str());
-	  //cerr << r2;
-	  //may have to make the rsq's a double
-	  //r2 = stod (lineVector.at(7)); 
+	 
 	  rsq.push_back(r2);
 	  
 	}
@@ -441,10 +421,7 @@ void process_ldfile( const options & O, H5File & ofile )
 					    cparms);
 
   snpB_dset.write(snpB.data(), datatype );
-  /*for (vector<ESMBASE>::const_iterator i = rsq.begin();i!=rsq.end();++i)
-    {
-      cerr << *i<< ' ';
-      }*/
+  
   DataSet rsq_dset = ofile.createDataSet("/LD/rsq",
 					 H5::PredType::NATIVE_FLOAT,
 					 dataspace,
