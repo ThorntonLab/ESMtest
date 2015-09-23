@@ -1,25 +1,11 @@
-//HPC modules needed: hdf5/1.8.11 boost/1.54.0 zlib/1.2.7
-/*
-TODO:
-1)determine a method to deal with multiple chromosomes
-2)determine best output format
-3)test effect of window size, jump size and number of markers
-4)deal with LD
- */
 
-/*
-  libhdf5 -- the C++ interface is in this header.
-
-  This also exposes the C interface.
-*/
-#include <H5Cpp.h>
-//Command line parsing using boost (C++)
+//Boost headers
 #include <boost/program_options.hpp>
-
-//other boost stuff
 #include <boost/bind.hpp>
 #include <boost/unordered_map.hpp>
-//zlib is included b/c it probably makes sense to write the output as a gzip file
+
+//C headers
+#include <H5Cpp.h>
 #include <zlib.h>
 
 //Standard c++
@@ -230,12 +216,7 @@ void calc_esm( const vector<ESMBASE> * data,
   vector<ESMBASE> ESM_perm ( nperms );
   for ( size_t j = 0; j< nperms; ++j)
     {
-		  //sort the markers for this range ( this sorts in ascending order)
-      /* sort( *data.begin()+ nmarkers*j,
-	    *data.begin() + nmarkers*j + nmarkers,
-	    boost::bind(greater<ESMBASE>(),_1,_2)
-	    );*/
-
+    
       ESMBASE ESM = 0;
       /*calculate the ESM
 	Which is:
@@ -252,13 +233,13 @@ void calc_esm( const vector<ESMBASE> * data,
 	{
 	  temp.push_back((*data)[nmarkers*j + k]*keep_markers_win[k]);
 	}
+      //sort the markers for this range ( this sorts in ascending order)
       sort( temp.begin(),temp.end(),boost::bind(greater<ESMBASE>(),_1,_2));
       for ( int k =0 ; k < min(K,nmarkers) ; ++k )
 	{
-	  // ESM += *data[nmarkers*j + k] + log10(((ESMBASE) k + 1) / (ESMBASE) nmarkers); 
 	  ESM += temp[k] + log10(((ESMBASE) k + 1) / (ESMBASE) nmarkers);
 	}
-		  //j = 0:n_perms -1, i = 0:nfiles-1
+		  
       ESM_perm[j] = ESM;
       
     } 
@@ -321,14 +302,14 @@ void run_test( const esm_options & O )
   int left = 1, right = O.winsize  + O.jumpsize*(O.nwindows-1) + 1;
 
   //Step 3: go over the current data and make sure that our helper functions are working
-  //unsigned j=0; 
+  
    const int LPOS = *(pos_0.end()-1); //This is the last position in pos_0.  Equivalent to pos[pos.size()-1], but I guess I like to complicate things.
   
   //declare vectors for the final PVALUES, the midpoint of associated window and chromosome(dumbway):
   vector<ESMBASE> p_values;
   vector<ESMBASE> midpoints;
 
-  // vector<ESMBASE> chrom_track;
+  
   //While there is at least one valid window in the set
   while( (LPOS - left)>= O.winsize )
     {
@@ -362,11 +343,8 @@ void run_test( const esm_options & O )
       	 	 
 	  for( size_t i = 0 ; i < O.infiles.size() ; ++i ) 
 	    {
-	      // cerr << "reading perms"<<'\n';
-	      //cerr << "start win mid = " << loci_mid[0] << '\n';
 	      //Get a the slab in vector form from the file
 	      vector<ESMBASE> fresh = read_doubles_slab(O.infiles[i].c_str(),"/Perms/permutations",indexes_set.first, nmarkers_set,O.cmarkers,O.cperms,O.nperms) ;
-	      //cerr <<fresh.size()<<'\n';
 	      for ( size_t b = 0; b< fresh.size(); ++b)
 		{
 		  newdata.push_back(fresh[b]);
@@ -374,7 +352,7 @@ void run_test( const esm_options & O )
 	    }
 	  //this should be the same, but may as well determine it here
 	  size_t nperms_tot = newdata.size()/nmarkers_set;
-	  //cerr << "nperms = " << nperms_tot << '\n';
+	  
 	  //prepare the vector of esm values  for the new values from the file
 	  //we have one ESM value for each perm
 	  //vector of vectors to contain data for all perms in each window
@@ -383,10 +361,9 @@ void run_test( const esm_options & O )
 	  for ( int m = 0 ; m < nwin_set; ++m)
 	    {
 	      if( indexes_win[m].first != numeric_limits<size_t>::max() ){
-		
-		// using the constructor to copy chisq_obs; probably the same as using equals, but I wasn't 100% sure
+		//using the constructor to copy chisq_obs; probably the same as using equals, but I wasn't 100% sure
 		//used to reset the sorting that occurs
-		//cerr << "nmarkers win = " << nmarkers_win[m]<< '\n';
+		
 		vector<ESMBASE> chisq_win( chisq_obs ) ;
 		vector<string> markers_win ( markers_0 ) ;
 		vector<short> keep ( nmarkers_win[m], 1 );
@@ -394,7 +371,8 @@ void run_test( const esm_options & O )
 		snp_pair AB;
 		ESMBASE LD_AB;
 		size_t a = 0;
-		
+		//Go through markers in the window and filter by LD
+		//If two markers are in too much LD, then keep the one to the left, i.e. the first one
 		for (size_t q = indexes_win[m].first; q < indexes_win[m].first + nmarkers_win[m]-1;++q,++a)
 		  {
 		    size_t b = a + 1;
@@ -408,9 +386,9 @@ void run_test( const esm_options & O )
 			      {
 				
 				keep_markers_win[m][b] = 0;
-				//cerr << "chisq "<< qq <<" before= "<< chisq_win[qq]<< '\n';
+				
 				chisq_win[qq] = chisq_win[qq]*0;
-				//cerr << "chisq "<< qq << " after= "<<chisq_win[qq]<<'\n';
+				
 			      }
 			  }
 					
@@ -487,7 +465,7 @@ void run_test( const esm_options & O )
   output << "p.values"<<' '<<"loci.midpoint"<<'\n';
   for ( size_t i = 0; i< p_values.size(); ++i)
     { 
-      output<<p_values[i]<<' '<<midpoints[i]<<'\n';//<<chroms_track[i]<<'\n';
+      output<<p_values[i]<<' '<<midpoints[i]<<'\n';
     }
   output.close();
 }
