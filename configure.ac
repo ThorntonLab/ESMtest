@@ -21,12 +21,12 @@ AC_TYPE_SIZE_T
 AC_CONFIG_FILES([Makefile src/Makefile])
 
 AC_CHECK_HEADER(zlib.h,,[AC_MSG_ERROR([zlib.h not found.  zlib >= 1.2.5 is requred])])
-AC_CHECK_HEADER(H5Cpp.h,,[AC_MSG_ERROR([H5Cpp.h not found.  HDF5 >= 1.8.11 is requred])])
 AC_CHECK_HEADER(boost/program_options.hpp,[AC_DEFINE([HAVE_BOOST_PROGRAM_OPTIONS],[1],[Is boost program options header found?])],[AC_MSG_ERROR([boost program options requested but boost/program_options.hpp not found])])
 AC_CHECK_HEADER(boost/bind.hpp,[AC_DEFINE([HAVE_BOOST_BIND],[1],[Is boost bind header found?])],[AC_MSG_ERROR([boost bind requested but boost/bind.hpp not found])])
 AC_CHECK_HEADER(boost/algorithm/string.hpp,[AC_DEFINE([HAVE_BOOST_ALGORITHM_STRING],[1],[Is boost algorithm string header found?])],[AC_MSG_ERROR([boost algorithm string requested but boost/algorithm/string.hpp not found])])
 AC_CHECK_HEADER(boost/unordered_map.hpp,[AC_DEFINE([HAVE_BOOST_UNORDERED_MAP],[1],[Is boost unordered map header found>])],[AC_MSG_ERROR([boost map requested but boost/unordered_map.hpp not foun])])
 AC_CHECK_HEADER(gsl/gsl_cdf.h,HAVE_GSL=1,[AC_MSG_ERROR([gsl/gsl_cdf.h not found.  Please install the GNU Scientific Library])])
+AC_CHECK_HEADER(H5Cpp.h,,[AC_MSG_ERROR([H5Cpp.h not found.  HDF5 >= 1.8.11 is requred])])
 AC_CHECK_HEADER(Sequence/SimData.hpp, , [AC_MSG_ERROR([Sequence/SimData.hpp not found. libsequence (www.molpopgen.org) >= 1.7.8 required.])])
 
 dnl check for C run-time libraries
