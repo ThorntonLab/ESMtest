@@ -38,6 +38,9 @@
 /* Define to 1 if you have the `hdf5_cpp' library (-lhdf5_cpp). */
 #define HAVE_LIBHDF5_CPP 1
 
+/* Define to 1 if you have the `pthread' library (-lpthread). */
+#define HAVE_LIBPTHREAD 1
+
 /* Define to 1 if you have the `sequence' library (-lsequence). */
 #define HAVE_LIBSEQUENCE 1
 

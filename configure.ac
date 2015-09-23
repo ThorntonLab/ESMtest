@@ -34,6 +34,7 @@ AC_CHECK_LIB([z],gzungetc,,[AC_MSG_ERROR([zlib run time library not found])])
 AC_CHECK_LIB([gslcblas],[cblas_dgemm],,[AC_MSG_ERROR([gslcblas run-time library not found])])
 AC_CHECK_LIB([gsl],[gsl_blas_dgemm],,[AC_MSG_ERROR([gsl run-time library not found])])
 AC_CHECK_LIB([hdf5],[H5Dget_type],,[AC_MSG_ERROR([HDF5 run-time library not found])])
+AC_CHECK_LIB([pthread],[pthread_create],,[AC_MSG_ERROR([pthread run-time library not found])])
 
 dnl check for C++ run-time libraries
 AC_LANG_SAVE
