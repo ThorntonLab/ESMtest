@@ -8,7 +8,9 @@ Implements an association test based on the ESM statistic from [this paper](http
 2.  [boost](http://www.boost.org) --  Version 1.53 or greater is fine.
 3.  [zlib](http://zlib.net) -- Version 1.2.7 is required.  mergeperms.cc checks this at compile time and will fail if a lower version number is encountered
 4.  [GSL](http://gnu.org/software/gsl)
-5.  [HDF5](https://www.hdfgroup.org/HDF5/release/obtain5.html) -- version 1.8.11 or greater is fine
+5.  [HDF5](https://www.hdfgroup.org/HDF5/release/obtain5.html) --
+    version 1.8.11 or greater is fine (Install with --enable-cxx
+    during configure step)
 6.  [Python](https://www.python.org/downloads/)--2.7.2+ -- Only needed if using h5merge.py,which is not strictly necessary
 7.  [h5py](http://www.h5py.org/) -- Only needed if using h5merge.py,which is not strictly necessary
 8.  [numpy](http://www.numpy.org/) -- Only needed if using h5merge.py,which is not strictly necessary
