@@ -1,0 +1,21 @@
+PLINK v1.90a 64-bit (7 Mar 2014) 
+10 arguments: --file fake --hwe 0.1 --make-bed --map3 --noweb --out fake --silent
+Hostname: hpc-login-1-2.local
+Working directory: /data/users/jsanjak/ESM/simulated_workflow/small
+Start time: Fri Sep 25 11:21:22 2015
+
+Note: --map3 flag unnecessary (.map file format is autodetected).
+Note: --noweb has no effect since no web check is implemented yet.
+258459 MB RAM detected; reserving 129229 MB for main workspace.
+Scanning .ped file... done.
+Performing single-pass .bed write (500 variants, 3000 people).
+--file: binary fileset written to fake-temporary.bed + .bim + .fam.
+500 variants and 3000 people (1500 males, 1500 females) loaded.
+Using 1 thread (no multithreaded calculations invoked).
+1500 cases and 1500 controls present.
+Calculating allele frequencies... done.
+2 variants removed due to Hardy-Weinberg exact test (--hwe).
+498 variants and 3000 people pass filters and QC.
+--make-bed to fake.bed + .bim + .fam... done.
+
+End time: Fri Sep 25 11:21:22 2015

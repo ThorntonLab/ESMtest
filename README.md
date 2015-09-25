@@ -15,15 +15,7 @@ Implements an association test based on the ESM statistic from [this paper](http
 7.  [h5py](http://www.h5py.org/) -- Only needed if using h5merge.py,which is not strictly necessary
 8.  [numpy](http://www.numpy.org/) -- Only needed if using h5merge.py,which is not strictly necessary
 
-
 Please use your system's package installation tools to install the above whenever possible.
-
-## Dependencies for Simulated Examples
-
-1. [ms](http://home.uchicago.edu/rhudson1/source/mksamples.html)
-2. [libsequence](https://github.com/molpopgen/libsequence).
-
-If you need to compile from source and are generally uncomfortable doing so, you may use this [script](https://github.com/molpopgen/install_libseq), which also installs [libsequence](https://github.com/molpopgen/libsequence).  Please read carefully the README that comes with the script.
 
 ##Installing ESM
 

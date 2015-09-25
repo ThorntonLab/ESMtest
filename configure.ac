@@ -27,7 +27,7 @@ AC_CHECK_HEADER(boost/algorithm/string.hpp,[AC_DEFINE([HAVE_BOOST_ALGORITHM_STRI
 AC_CHECK_HEADER(boost/unordered_map.hpp,[AC_DEFINE([HAVE_BOOST_UNORDERED_MAP],[1],[Is boost unordered map header found>])],[AC_MSG_ERROR([boost map requested but boost/unordered_map.hpp not foun])])
 AC_CHECK_HEADER(gsl/gsl_cdf.h,HAVE_GSL=1,[AC_MSG_ERROR([gsl/gsl_cdf.h not found.  Please install the GNU Scientific Library])])
 AC_CHECK_HEADER(H5Cpp.h,,[AC_MSG_ERROR([H5Cpp.h not found.  HDF5 >= 1.8.11 is requred])])
-AC_CHECK_HEADER(Sequence/SimData.hpp, , [AC_MSG_ERROR([Sequence/SimData.hpp not found. libsequence (www.molpopgen.org) >= 1.7.8 required.])])
+
 
 dnl check for C run-time libraries
 AC_CHECK_LIB([z],gzungetc,,[AC_MSG_ERROR([zlib run time library not found])])
@@ -40,7 +40,6 @@ dnl check for C++ run-time libraries
 AC_LANG_SAVE
 	AC_LANG_CPLUSPLUS
 	AC_REQUIRE_CPP
-	AC_CHECK_LIB(sequence, main,,[AC_MSG_ERROR([libsequence runtime library does not seem to be here])])	    
 	AC_CHECK_LIB(boost_system,main,,[AC_MSG_WARN([boost containers requested but the boost_system runtime library does not seem to be here])])
 	AC_CHECK_LIB(boost_program_options,main,,[AC_MSG_WARN([boost program options requested but the boost_program_option runtime library does not seem to be here])])
 	AC_CHECK_LIB([hdf5_cpp],main,,[AC_MSG_ERROR([HDF5 C++ run-time library not found])])
