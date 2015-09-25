@@ -1,4 +1,4 @@
-AC_PREREQ(2.69)
+AC_PREREQ(2.59)
 AC_INIT([ESM],[0.1.0],[https://github.com/ThorntonLab/ESMtest])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([config.h])
