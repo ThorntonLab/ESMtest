@@ -12,9 +12,11 @@ you dependencies installed in the "usual places"?
        *plink does single marker test on permuted datasets. Here we do
         2,000 permutations in 2 sets
 plink --noweb --file fake --map3 --r2 --out fake.1 
+
 plink --noweb --file fake --assoc --map3 --mperm 1000 --mperm-save-all  --out fake.1 --seed 1 
 
 plink --noweb --file fake --map3 --r2 --out fake.2 
+
 plink --noweb --file fake --assoc --map3 --mperm 1000 --mperm-save-all  --out fake.2 --seed 1 
 
       *perms2h5 converts permutation output to h5 format for later use
