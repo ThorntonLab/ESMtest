@@ -22,4 +22,4 @@
 #plink
 
 #Process permutations in chunks of 50 records at a time                                                                                                           
-esmk -o fake_merged.esmpv.txt -w 10000 -j 1000 -k 50 -n 1 -r 0.5 --cmarkers 50 --cperms 10000 --nperms 10000 fake.all.perms.h5
+esmk -o fake_merged.esmpv.txt -w 10000 -j 1000 -k 50 -n 1 -r 0.5 --cmarkers 50 --cperms 1000 --nperms 2000 fake.all.perms.h5
