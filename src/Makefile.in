@@ -32,7 +32,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = perms2h5$(EXEEXT) esmk$(EXEEXT) ms2plink$(EXEEXT)
+bin_PROGRAMS = perms2h5$(EXEEXT) esmk$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -49,9 +49,6 @@ PROGRAMS = $(bin_PROGRAMS)
 am_esmk_OBJECTS = esmk.$(OBJEXT) H5util.$(OBJEXT)
 esmk_OBJECTS = $(am_esmk_OBJECTS)
 esmk_LDADD = $(LDADD)
-am_ms2plink_OBJECTS = ms2plink.$(OBJEXT)
-ms2plink_OBJECTS = $(am_ms2plink_OBJECTS)
-ms2plink_LDADD = $(LDADD)
 am_perms2h5_OBJECTS = perms2h5.$(OBJEXT)
 perms2h5_OBJECTS = $(am_perms2h5_OBJECTS)
 perms2h5_LDADD = $(LDADD)
@@ -64,8 +61,8 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
-SOURCES = $(esmk_SOURCES) $(ms2plink_SOURCES) $(perms2h5_SOURCES)
-DIST_SOURCES = $(esmk_SOURCES) $(ms2plink_SOURCES) $(perms2h5_SOURCES)
+SOURCES = $(esmk_SOURCES) $(perms2h5_SOURCES)
+DIST_SOURCES = $(esmk_SOURCES) $(perms2h5_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -161,7 +158,6 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 perms2h5_SOURCES = perms2h5.cc
 esmk_SOURCES = esmk.cc H5util.cc
-ms2plink_SOURCES = ms2plink.cc
 all: all-am
 
 .SUFFIXES:
@@ -236,9 +232,6 @@ clean-binPROGRAMS:
 esmk$(EXEEXT): $(esmk_OBJECTS) $(esmk_DEPENDENCIES) 
 	@rm -f esmk$(EXEEXT)
 	$(CXXLINK) $(esmk_OBJECTS) $(esmk_LDADD) $(LIBS)
-ms2plink$(EXEEXT): $(ms2plink_OBJECTS) $(ms2plink_DEPENDENCIES) 
-	@rm -f ms2plink$(EXEEXT)
-	$(CXXLINK) $(ms2plink_OBJECTS) $(ms2plink_LDADD) $(LIBS)
 perms2h5$(EXEEXT): $(perms2h5_OBJECTS) $(perms2h5_DEPENDENCIES) 
 	@rm -f perms2h5$(EXEEXT)
 	$(CXXLINK) $(perms2h5_OBJECTS) $(perms2h5_LDADD) $(LIBS)
@@ -251,7 +244,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/H5util.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/esmk.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ms2plink.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/perms2h5.Po@am__quote@
 
 .cc.o:
