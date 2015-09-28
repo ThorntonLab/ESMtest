@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <cstring>
+#include <typeinfo>
 
 using namespace std;
 using namespace boost::program_options;
@@ -90,7 +91,17 @@ int main( int argc, char ** argv )
   H5File ofile( O.outfile.c_str() , H5F_ACC_TRUNC,H5P_DEFAULT,fapl );
   size_t nmarkers = process_bimfile( O, ofile );
   process_perms( O, nmarkers, ofile );
-  process_ldfile( O, ofile ); 
+    if ( O.verbose )
+    {
+      cerr << "I finished processing perms" <<"\n";
+    }
+
+  process_ldfile( O, ofile );
+  if ( O.verbose )
+    {
+      cerr << "I finished processing LD" <<"\n";
+    }
+
   ofile.close();
   exit(0);
 }
@@ -371,32 +382,54 @@ void process_perms( const options & O, size_t nmarkers, H5File & ofile )
 
 void process_ldfile( const options & O, H5File & ofile )
 {
-  
+  if ( O.verbose )
+    {
+      cerr << "I am processing LD" <<"\n";
+    }
   ifstream ldf (O.ldfile.c_str());
+  if ( O.verbose )
+    {
+      cerr << "I opened LD file" <<"\n";
+    }
   string line;
-  vector<string> lineVector, snpA, snpB;
+  vector<string> lineVector;
+  vector < const char * > snpA, snpB;
   vector<ESMBASE> rsq;
   ESMBASE r2;
   string::size_type sz;
   if (ldf.is_open())
     {
+      if ( O.verbose )
+    {
+      cerr << "LD file is open" <<"\n";
+    }
       while(getline(ldf,line))
 	{
-	  
+
 	  boost::split(lineVector,line,boost::is_any_of(" "),boost::token_compress_on);
-	  snpA.push_back(lineVector.at(3));
-	  snpB.push_back(lineVector.at(6));
-	  r2 = ::atof( lineVector.at(7).c_str());
-	 
+	  snpA.push_back(lineVector.at(3).c_str());
+	  snpB.push_back(lineVector.at(6).c_str());
+	  r2 = atof( lineVector.at(7).c_str());
 	  rsq.push_back(r2);
-	  
+	
 	}
+        if ( O.verbose )
+    {
+      cerr << "I finished reading ld" <<"\n";
+    }
       ldf.close();
+        if ( O.verbose )
+    {
+      cerr << "I closed LD" <<"\n";
+    }
     }
   else cerr <<"Unable to read LD file"<< '\n';
   
   ofile.createGroup("/LD");
-  
+  if ( O.verbose )
+    {
+      cerr << "I made the group" <<"\n";
+    }
   DSetCreatPropList cparms;
   hsize_t chunk_dims[1] = {snpA.size()};
   hsize_t maxdims[1] = {snpA.size()};
@@ -408,20 +441,34 @@ void process_ldfile( const options & O, H5File & ofile )
 
   H5::StrType datatype(H5::PredType::C_S1, H5T_VARIABLE); 
 
+  if ( O.verbose )
+    {
+      cerr << "I setup the space" <<"\n";
+    }
   DataSet snpA_dset = ofile.createDataSet("/LD/snpA",
 					    datatype,
 					    dataspace,
 					    cparms);
-
+if ( O.verbose )
+    {
+      cerr << "snpA type is  " << typeid(snpA).name()<<"\n";
+      //cerr << "datatype is " << datatype <<"\n";
+    }
   snpA_dset.write(snpA.data(), datatype );
-  
+  if ( O.verbose )
+    {
+      cerr << "wrote SNP A" <<"\n";
+    }
   DataSet snpB_dset = ofile.createDataSet("/LD/snpB",
 					    datatype,
 					    dataspace,
 					    cparms);
 
   snpB_dset.write(snpB.data(), datatype );
-  
+  if ( O.verbose )
+    {
+      cerr << "wrote SNP B" <<"\n";
+    }
   DataSet rsq_dset = ofile.createDataSet("/LD/rsq",
 					 H5::PredType::NATIVE_FLOAT,
 					 dataspace,
@@ -429,7 +476,10 @@ void process_ldfile( const options & O, H5File & ofile )
 
 
   rsq_dset.write( rsq.data(),H5::PredType::NATIVE_FLOAT );
-
+  if ( O.verbose )
+    {
+      cerr << "wrote Rsq" <<"\n";
+    }
 }
 
 void firstprime (size_t & num)
