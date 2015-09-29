@@ -392,8 +392,8 @@ void process_ldfile( const options & O, H5File & ofile )
       cerr << "I opened LD file" <<"\n";
     }
   string line;
-  vector<string> lineVector;
-  vector < const char * > snpA, snpB;
+  vector<string> lineVector,snpA,snpB;
+  vector < const char * > snpA_str, snpB_str;
   vector<ESMBASE> rsq;
   ESMBASE r2;
   string::size_type sz;
@@ -407,8 +407,13 @@ void process_ldfile( const options & O, H5File & ofile )
 	{
 
 	  boost::split(lineVector,line,boost::is_any_of(" "),boost::token_compress_on);
-	  snpA.push_back(lineVector.at(3).c_str());
-	  snpB.push_back(lineVector.at(6).c_str());
+	  snpA.push_back(lineVector.at(3));
+	  if ( O.verbose )
+    {
+      cerr << "SNP A = " << lineVector.at(3).c_str() << "\n";
+      cerr << "snpA type is  " << typeid(lineVector.at(3).c_str()).name()<<"\n";
+    }
+	  snpB.push_back(lineVector.at(6));
 	  r2 = atof( lineVector.at(7).c_str());
 	  rsq.push_back(r2);
 	
@@ -424,15 +429,19 @@ void process_ldfile( const options & O, H5File & ofile )
     }
     }
   else cerr <<"Unable to read LD file"<< '\n';
-  
+    for( unsigned i = 0 ; i < snpA.size() ; ++i )
+    {
+      snpA_str.push_back( snpA[i].c_str() );
+      snpB_str.push_back( snpA[i].c_str() );
+    }
   ofile.createGroup("/LD");
   if ( O.verbose )
     {
       cerr << "I made the group" <<"\n";
     }
   DSetCreatPropList cparms;
-  hsize_t chunk_dims[1] = {snpA.size()};
-  hsize_t maxdims[1] = {snpA.size()};
+  hsize_t chunk_dims[1] = {snpA_str.size()};
+  hsize_t maxdims[1] = {snpA_str.size()};
 
   cparms.setChunk( 1, chunk_dims );
   cparms.setDeflate( 6 ); //compression level makes a big differences in large files!  Default is 0 = uncompressed.
@@ -454,7 +463,7 @@ if ( O.verbose )
       cerr << "snpA type is  " << typeid(snpA).name()<<"\n";
       //cerr << "datatype is " << datatype <<"\n";
     }
-  snpA_dset.write(snpA.data(), datatype );
+  snpA_dset.write(snpA_str.data(), datatype );
   if ( O.verbose )
     {
       cerr << "wrote SNP A" <<"\n";
@@ -464,7 +473,7 @@ if ( O.verbose )
 					    dataspace,
 					    cparms);
 
-  snpB_dset.write(snpB.data(), datatype );
+  snpB_dset.write(snpB_str.data(), datatype );
   if ( O.verbose )
     {
       cerr << "wrote SNP B" <<"\n";

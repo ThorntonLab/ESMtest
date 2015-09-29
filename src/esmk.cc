@@ -158,11 +158,14 @@ esm_options parseargs( int argc, char ** argv )
 bool permfilesOK( const esm_options & O )
 {
   if( O.infiles.empty() ) { return false; }
- 
+
 
   vector<string> chroms_0 = read_strings(O.infiles[0].c_str(),"/Markers/chr");
+ 
   set<string> sc_0(chroms_0.begin(),chroms_0.end());
+  
   if( sc_0.size() > 1 ) { return false; }
+ 
   vector<string> markers_0 = read_strings(O.infiles[0].c_str(),"/Markers/IDs");
   vector<int> pos_0 = read_ints(O.infiles[0].c_str(),"/Markers/pos");  
   vector<string> snpA_0 = read_strings(O.infiles[0].c_str(),"/LD/snpA");
@@ -177,8 +180,35 @@ bool permfilesOK( const esm_options & O )
       vector<int> pos_i = read_ints(O.infiles[i].c_str(),"/Markers/pos");
       vector<string> snpA_i = read_strings(O.infiles[i].c_str(),"/LD/snpA");
       vector<string> snpB_i = read_strings(O.infiles[i].c_str(),"/LD/snpB");
+if( markers_0 != markers_i)
+	{
+	  cerr <<"markers are not equal"<<"\n";
+	  return false;
+	}
+ if(  sc_0 != sc_i )
+	{
+	  cerr <<"chroms are not equal"<<"\n";
+	  return false;
+	}
+ if(pos_0 != pos_i )
+	{
+	  cerr <<"positions not equal"<<"\n";
+	  return false;
+	}
+ if(  snpA_0 != snpA_i )
+	{
+	  cerr <<"snpA not equal"<<"\n";
+	  return false;
+	}
+  if(  snpB_0 != snpB_i )
+	{
+	  cerr <<"snpA not equal"<<"\n";
+	  return false;
+	}  
+      
       if( markers_0 != markers_i || sc_0 != sc_i || pos_0 != pos_i || snpA_0 != snpA_i || snpB_0 != snpB_i)
 	{
+	  cerr <<"things are not equal"<<"\n";
 	  return false;
 	}  
     }

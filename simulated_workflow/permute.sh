@@ -25,14 +25,14 @@
 #Do perms in chunks
 
 plink --noweb --file fake --map3 --r2 --out fake.1 
-plink --noweb --file fake --assoc --map3 --mperm 1000 --mperm-save-all  --out fake.1 --seed 1 
+plink --noweb --file fake --map3 --r2 --out fake.2
 
-plink --noweb --file fake --map3 --r2 --out fake.2 
+plink --noweb --file fake --assoc --map3 --mperm 1000 --mperm-save-all  --out fake.1 --seed 1 
 plink --noweb --file fake --assoc --map3 --mperm 1000 --mperm-save-all  --out fake.2 --seed 1 
 
 #Process permutations in chunks of 50 records at a time                                                                                                                       
 perms2h5 -i fake.1.mperm.dump.all -o fake.1.perms.h5 -b fake.bim -n 50 -l fake.1.ld 
-perms2h5 -i fake.2.mperm.dump.all -o fake.2.perms.h5 -b fake.bim -n 50 -l fake.1.ld
+perms2h5 -i fake.2.mperm.dump.all -o fake.2.perms.h5 -b fake.bim -n 50 -l fake.2.ld
 
 #Delete needless output                                                                                                                                                           
 rm -f fake.*.mperm.dump.all
