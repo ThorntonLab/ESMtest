@@ -39,3 +39,17 @@ If you want to install it in non-standard location (i.e your prefix if not /usr/
 **make**
 
 **make install**
+
+We have found an issue with installation on Ubuntu 15. HDF5. There are separate serial and MPI versions of HDF5. Most likely you hhave the serial version installed. Thus you will need to be more specific about the headers and runtime libraries.
+
+We recommend that you symlink the preferred library to the regular name, so that it can be linked with -lhdf5. Perhaps your libhdf5_serial.so is in '/usr/lib/x86_64-linux-gnu'
+
+**link ~/lib/libhdf5.so /PATH/TO/libhdf5_serial.so**
+
+Add the path to LDFLAGS.
+
+**LDFLAGS=-L$HOME/lib**
+
+You will also need specify the directory of the HDF5 header files:
+
+**CPPFLAGS=/usr/include/hdf5/serial**
