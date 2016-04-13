@@ -52,4 +52,4 @@ Add the path to LDFLAGS.
 
 You will also need specify the directory of the HDF5 header files:
 
-**CPPFLAGS=/usr/include/hdf5/serial**
+**CPPFLAGS=-I/usr/include/hdf5/serial**
