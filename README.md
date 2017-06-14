@@ -1,6 +1,6 @@
 #A PLINK-based implementation of the "ESM" test for associations due to rare alleles in GWAS data
 
-Implements an association test based on the ESM statistic from [this paper](http://www.plosgenetics.org/article/info%3Adoi%2F10.1371%2Fjournal.pgen.1003258).
+Implements an association test based on the ESM statistic first desribed [here](http://www.plosgenetics.org/article/info%3Adoi%2F10.1371%2Fjournal.pgen.1003258) and published [here](http://www.g3journal.org/content/early/2016/02/08/g3.115.026013).
 
 ## Dependencies
 
